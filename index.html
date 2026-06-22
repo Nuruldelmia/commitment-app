@@ -1,108 +1,865 @@
-// ============================================================
-// COMMITMENT MANAGER — Google Apps Script Backend (SECURED)
-// ============================================================
-// IMPORTANT: Change the SECRET_KEY below to your own password!
-// Use something only you know — e.g. your name + birth year
-// ============================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#1D9E75" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Commitments" />
+<title>Commitment Manager</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" />
+<style>
+:root{
+  --bg:#ffffff;--bg2:#f5f5f4;--bg3:#ece9e3;
+  --text:#1a1a1a;--text2:#666;--text3:#aaa;
+  --border:rgba(0,0,0,.12);--border2:rgba(0,0,0,.22);
+  --radius:10px;--radius-lg:14px;
+  --green:#1D9E75;--red:#e24b4a;--orange:#BA7517;--blue:#0c447c;
+  --info-bg:#e6f1fb;--info-txt:#0c447c;--info-border:rgba(24,95,165,.3);
+  --warn-bg:#faeeda;--warn-txt:#633806;--warn-border:rgba(186,117,23,.3);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1c1c1e;--bg2:#2c2c2e;--bg3:#111;
+    --text:#f2f2f7;--text2:#aeaeb2;--text3:#555;
+    --border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.2);
+    --info-bg:#0c2a4a;--info-txt:#85b7eb;
+    --warn-bg:#2e1f05;--warn-txt:#fac775;--warn-border:rgba(250,199,117,.25);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);min-height:100vh;padding-bottom:calc(60px + env(safe-area-inset-bottom))}
 
-const SHEET_NAME = 'CommitmentDB';
-const SECRET_KEY = 'MiaaDelmia0508'; // <-- CHANGE THIS to your own secret
+/* TOPBAR */
+.topbar{background:var(--bg);border-bottom:1px solid var(--border);padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar h1{font-size:17px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
+.topbar h1 i{color:var(--green);font-size:20px}
+.sync-row{display:flex;align-items:center;gap:6px}
+.sync-status{font-size:11px;display:flex;align-items:center;gap:4px}
+.sync-status.synced{color:var(--green)}
+.sync-status.syncing{color:var(--text2)}
+.sync-status.error{color:var(--red)}
+.sync-status.offline{color:var(--orange)}
 
-function checkSecret(key) {
-  return key === SECRET_KEY;
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);display:flex;z-index:50;padding-bottom:env(safe-area-inset-bottom)}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 4px 5px;border:none;background:transparent;cursor:pointer;color:var(--text3);font-size:10px;gap:2px;min-height:54px;transition:color .15s}
+.nav-btn i{font-size:23px}
+.nav-btn.active{color:var(--green)}
+
+/* SETUP SCREEN */
+.setup-screen{display:none;padding:1.5rem 1rem;max-width:480px;margin:0 auto}
+.setup-screen.show{display:block}
+.setup-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
+.setup-card h2{font-size:16px;font-weight:700;margin-bottom:.75rem;color:var(--text);display:flex;align-items:center;gap:7px}
+.step{display:flex;gap:10px;margin-bottom:.875rem;align-items:flex-start}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-txt{font-size:14px;color:var(--text);line-height:1.6}
+.step-txt b{color:var(--green)}
+.step-txt code{font-size:12px;background:var(--bg2);padding:1px 5px;border-radius:4px;font-family:monospace;color:var(--text)}
+.url-input-wrap{display:flex;gap:8px;margin-top:.75rem}
+.url-input-wrap input{flex:1;font-size:13px;padding:9px 11px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text)}
+.url-input-wrap input:focus{outline:none;border-color:var(--green)}
+
+/* PANELS */
+.panel{display:none;padding:1rem}.panel.active{display:block}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;margin-bottom:.875rem}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem}
+.card-title{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
+.btn{font-size:13px;padding:8px 14px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-weight:600}
+.btn:active{opacity:.7}
+.btn-primary{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red)}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:.875rem}
+.met{background:var(--bg2);border-radius:var(--radius);padding:.75rem}
+.met-lbl{font-size:11px;color:var(--text2);margin-bottom:3px;font-weight:500}
+.met-val{font-size:17px;font-weight:700;color:var(--text)}
+.met-val.red{color:var(--red)}.met-val.grn{color:var(--green)}.met-val.org{color:var(--orange)}
+.chip{font-size:11px;padding:2px 7px;border-radius:20px;white-space:nowrap;display:inline-block;font-weight:600}
+.chip-grn{background:#E1F5EE;color:#085041}.chip-blu{background:#E6F1FB;color:#0C447C}
+.chip-red{background:#FCEBEB;color:#791F1F}.chip-org{background:#FAEEDA;color:#633806}
+.chip-pur{background:#EEEDFE;color:#3C3489}.chip-gry{background:#F1EFE8;color:#444441}
+.del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:19px;padding:4px;border-radius:6px;flex-shrink:0}
+.del:active{color:var(--red)}
+.chk{width:19px;height:19px;cursor:pointer;accent-color:var(--green);flex-shrink:0}
+.pbar-wrap{background:var(--bg2);border-radius:20px;height:7px;overflow:hidden}
+.pbar{height:100%;border-radius:20px;transition:width .4s}
+.alert-box{background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:var(--radius);padding:.65rem .875rem;margin-bottom:.625rem;font-size:13px;color:var(--warn-txt);display:flex;align-items:flex-start;gap:7px}
+.rsub{font-size:11px;color:var(--text2);margin-top:3px;line-height:1.5}
+.hint{font-size:12px;color:var(--text2);padding:.5rem .75rem;background:var(--bg2);border-radius:var(--radius);margin-bottom:.875rem;display:flex;align-items:flex-start;gap:6px;line-height:1.5}
+.sec-lbl{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;padding:10px 0 5px;display:flex;align-items:center;gap:6px}
+.sec-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
+.master-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)}
+.master-row:last-child{border-bottom:none}
+.c-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.c-row:last-child{border-bottom:none}
+.amt-display{font-size:15px;font-weight:700;color:var(--text);cursor:pointer;padding:5px 9px;border-radius:var(--radius);border:1px solid var(--border);white-space:nowrap;display:inline-flex;align-items:center;gap:4px;background:var(--bg2)}
+.amt-display:active{opacity:.7}
+.amt-display.paid{color:var(--green)}
+.amt-input{font-size:15px;font-weight:700;width:105px;padding:5px 9px;border-radius:var(--radius);border:2px solid var(--green);background:var(--bg);color:var(--text);text-align:right}
+.debt-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:.875rem;overflow:hidden}
+.debt-main{padding:1rem}
+.debt-top{display:flex;align-items:flex-start;gap:8px;margin-bottom:.75rem}
+.debt-name{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.debt-meta{font-size:11px;color:var(--text2);margin-top:4px;display:flex;flex-wrap:wrap;gap:5px;line-height:1.7}
+.d-amts{display:flex;margin-bottom:.75rem;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.d-amt{flex:1;padding:.5rem;text-align:center;border-right:1px solid var(--border)}
+.d-amt:last-child{border-right:none}
+.d-amt-lbl{font-size:10px;color:var(--text2);margin-bottom:2px;font-weight:500}
+.d-amt-val{font-size:13px;font-weight:700}
+.pbar-row{display:flex;align-items:center;gap:8px}
+.pbar-row .pbar-wrap{flex:1}
+.acc-btn{width:100%;display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--bg2);border:none;border-top:1px solid var(--border);cursor:pointer;font-size:13px;color:var(--text2)}
+.acc-btn:active{opacity:.7}
+.acc-left{display:flex;align-items:center;gap:6px;font-weight:600}
+.acc-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.chevron{font-size:16px;transition:transform .25s}
+.chevron.open{transform:rotate(180deg)}
+.acc-body{display:none;border-top:1px solid var(--border)}
+.acc-body.open{display:block}
+.pay-row{display:flex;align-items:center;gap:10px;padding:10px 1rem;border-bottom:1px solid var(--border)}
+.pay-row:last-child{border-bottom:none}
+.pay-month{flex:1;font-size:14px;color:var(--text)}
+.pay-month.done{text-decoration:line-through;color:var(--text3)}
+.pay-amt{font-size:14px;font-weight:700;min-width:72px;text-align:right;white-space:nowrap}
+.pay-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:4px}
+.pay-del:active{color:var(--red)}
+.add-pay-row{display:flex;align-items:center;gap:6px;padding:.75rem 1rem;background:var(--bg2);border-top:1px solid var(--border)}
+.add-pay-row input,.add-pay-row select{font-size:13px;height:36px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);padding:0 8px}
+.settled-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:2px 8px;border-radius:20px;background:#E1F5EE;color:#085041;font-weight:700}
+.task-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.task-row:last-child{border-bottom:none}
+.empty{text-align:center;padding:2rem 1rem;color:var(--text3);font-size:14px;line-height:1.7}
+table.rpt{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+table.rpt th{font-size:11px;color:var(--text2);font-weight:700;text-align:left;padding:6px;border-bottom:1px solid var(--border)}
+table.rpt td{padding:7px 6px;color:var(--text);border-bottom:1px solid var(--border);vertical-align:top;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.rpt tr:last-child td{border-bottom:none}
+.rpt-total{display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding:.5rem .25rem;border-top:1px solid var(--border);margin-top:.25rem}
+
+/* MODAL */
+.modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:flex-end;justify-content:center}
+.modal-wrap.show{display:flex}
+.modal{background:var(--bg);border-radius:20px 20px 0 0;padding:1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));width:100%;max-width:520px;max-height:92vh;overflow-y:auto}
+.modal-drag{width:36px;height:4px;background:var(--border2);border-radius:4px;margin:0 auto 1rem}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:1rem;color:var(--text)}
+.fld{margin-bottom:.75rem}
+.fld label{font-size:12px;color:var(--text2);display:block;margin-bottom:3px;font-weight:600}
+.fld input,.fld select,.fld textarea{width:100%;font-size:15px;padding:10px 12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text)}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--green)}
+.half{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt-lbl{font-size:10px;color:var(--text3);margin-left:3px;font-weight:400}
+.mbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem}
+
+/* LOADING */
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:12px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1><i class="ti ti-clipboard-list"></i>Commitments</h1>
+  <div class="sync-row">
+    <div class="sync-status synced" id="sync-status">
+      <i class="ti ti-cloud-check" style="font-size:15px"></i>
+      <span id="sync-txt">Synced</span>
+    </div>
+    <button class="btn" style="padding:5px 9px;font-size:12px;margin-left:4px" onclick="syncNow()" title="Sync now">
+      <i class="ti ti-refresh" style="font-size:14px"></i>
+    </button>
+  </div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div class="setup-screen" id="setup-screen">
+  <div class="setup-card">
+    <h2><i class="ti ti-brand-google" style="color:var(--green);font-size:18px"></i>Connect to Google Sheets</h2>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6">Your data will be saved in your Google Drive — safe, synced across all your devices, and never lost.</p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-txt">Open <b>script.google.com</b> and sign in with your Google account. Click <b>New Project</b>.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-txt">Delete everything in the editor. Open the file <b>Code.gs</b> I gave you, copy everything, paste it in. Click <b>Save</b> (floppy disk icon).</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-txt">Click <b>Deploy → New Deployment</b>. Set type to <b>Web App</b>. Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b>. Click <b>Deploy</b>. Authorise when asked.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-txt">Copy the <b>Web App URL</b> that appears and paste it below.</div>
+    </div>
+
+    <div class="url-input-wrap">
+      <input type="url" id="script-url-input" placeholder="https://script.google.com/macros/s/..." />
+      <button class="btn btn-primary" onclick="connectScript()"><i class="ti ti-plug" style="font-size:14px"></i>Connect</button>
+    </div>
+    <div id="connect-error" style="font-size:12px;color:var(--red);margin-top:.5rem;display:none"></div>
+  </div>
+
+  <div class="setup-card" style="background:var(--info-bg);border-color:var(--info-border)">
+    <h2 style="font-size:14px;color:var(--info-txt)"><i class="ti ti-shield-check" style="font-size:16px"></i>Your data is private</h2>
+    <p style="font-size:12px;color:var(--info-txt);line-height:1.6">The Apps Script runs under <b>your</b> Google account. Data is stored in <b>your</b> Google Drive. Nobody else can access it — not even me.</p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app" style="display:none">
+  <div id="p-config" class="panel active">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title"><i class="ti ti-list" style="font-size:16px"></i>Master list</div>
+        <button class="btn btn-primary" onclick="openM('master')"><i class="ti ti-plus" style="font-size:14px"></i>Add</button>
+      </div>
+      <div class="hint"><i class="ti ti-info-circle" style="font-size:14px;flex-shrink:0;margin-top:1px"></i>Set up all recurring commitments here once. Pick from this list everywhere else. Default amount auto-fills but you can change it each month.</div>
+      <div id="master-list"></div>
+    </div>
+  </div>
+
+  <div id="p-commitment" class="panel">
+    <div id="alerts-c"></div>
+    <div class="metrics" id="met-c"></div>
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title"><i class="ti ti-wallet" style="font-size:16px"></i>This month</div>
+        <button class="btn btn-primary" onclick="openM('commitment')"><i class="ti ti-plus" style="font-size:14px"></i>Add</button>
+      </div>
+      <div class="hint" style="margin-bottom:.5rem"><i class="ti ti-pencil" style="font-size:13px;flex-shrink:0"></i>Tap the <b>amount</b> on any row to update the actual bill.</div>
+      <div id="list-c"></div>
+    </div>
+  </div>
+
+  <div id="p-debt" class="panel">
+    <div id="alerts-d"></div>
+    <div class="metrics" id="met-d"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+      <div class="card-title"><i class="ti ti-credit-card" style="font-size:16px"></i>Debts & loans</div>
+      <button class="btn btn-primary" onclick="openM('debt')"><i class="ti ti-plus" style="font-size:14px"></i>Add</button>
+    </div>
+    <div id="list-d"></div>
+  </div>
+
+  <div id="p-task" class="panel">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title"><i class="ti ti-checkbox" style="font-size:16px"></i>Tasks</div>
+        <button class="btn btn-primary" onclick="openM('task')"><i class="ti ti-plus" style="font-size:14px"></i>Add</button>
+      </div>
+      <div id="list-t"></div>
+      <div id="tprog" style="display:none;padding-top:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px"><span>Progress</span><span id="tpct"></span></div>
+        <div class="pbar-wrap"><div class="pbar" id="pfill" style="background:var(--green)"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="p-report" class="panel"><div id="rpt-content"></div></div>
+</div>
+
+<nav class="bottom-nav" id="bottom-nav" style="display:none">
+  <button class="nav-btn active" onclick="sw('config',this)"><i class="ti ti-settings"></i><span>Configure</span></button>
+  <button class="nav-btn" onclick="sw('commitment',this)"><i class="ti ti-wallet"></i><span>Commitment</span></button>
+  <button class="nav-btn" onclick="sw('debt',this)"><i class="ti ti-credit-card"></i><span>Debt</span></button>
+  <button class="nav-btn" onclick="sw('task',this)"><i class="ti ti-checkbox"></i><span>Tasks</span></button>
+  <button class="nav-btn" onclick="sw('report',this)"><i class="ti ti-chart-bar"></i><span>Report</span></button>
+</nav>
+
+<!-- MODAL -->
+<div class="modal-wrap" id="mwrap" onclick="closeModalBg(event)">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <h3 id="mtitle"></h3>
+    <div id="mbody"></div>
+    <div class="mbtns">
+      <button class="btn" onclick="closeM()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveM()"><i class="ti ti-device-floppy" style="font-size:14px"></i>Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────
+const STORAGE_KEY="commitmentScriptUrl";
+const SECRET_KEY="miaa-secret-2026"; // must match Code.gs
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const CATS=['Telco','Utilities','Subscription','Insurance','Transport','Finance','Education','Credit Card','Personal','Other'];
+const catChip={Telco:'chip-blu',Utilities:'chip-grn','Credit Card':'chip-red',Education:'chip-pur',Personal:'chip-gry',Subscription:'chip-pur',Finance:'chip-org',Insurance:'chip-org',Transport:'chip-gry',Other:'chip-gry'};
+const cc=c=>catChip[c]||'chip-gry';
+const fmtRM=v=>'RM '+parseFloat(v||0).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtD=d=>{if(!d)return'—';const[y,m,dy]=d.split('-');return`${dy}/${m}/${y}`};
+const today=()=>new Date().toISOString().slice(0,10);
+const daysLeft=d=>{if(!d)return null;return Math.ceil((new Date(d)-new Date(today()))/86400000)};
+const getMaster=id=>D.master.find(m=>m.id===id)||{name:'—',cat:'Other',amount:0};
+const remainingDebt=d=>Math.max(0,d.originalAmount-d.payments.filter(p=>p.paid).reduce((s,p)=>s+p.amount,0));
+const paidTotal=d=>d.payments.filter(p=>p.paid).reduce((s,p)=>s+p.amount,0);
+const isSettled=d=>remainingDebt(d)===0;
+const pctD=d=>Math.min(100,Math.round(paidTotal(d)/d.originalAmount*100));
+
+let nid=100, curM='', expanded={}, scriptUrl='', saveTimer=null;
+let D={master:[],commitments:[],debts:[],tasks:[]};
+
+// ─── SYNC ───────────────────────────────────────────────────
+function setSyncStatus(state, msg){
+  const el=document.getElementById('sync-status');
+  const txt=document.getElementById('sync-txt');
+  el.className='sync-status '+state;
+  txt.textContent=msg;
+  const icons={synced:'ti-cloud-check',syncing:'ti-cloud-upload',error:'ti-cloud-off',offline:'ti-wifi-off'};
+  el.querySelector('i').className='ti '+(icons[state]||'ti-cloud')+' ';
+  el.querySelector('i').style.fontSize='15px';
 }
 
-function getSheet() {
-  let ss;
-  const files = DriveApp.getFilesByName('CommitmentManagerDB');
-  if (files.hasNext()) {
-    ss = SpreadsheetApp.open(files.next());
-  } else {
-    ss = SpreadsheetApp.create('CommitmentManagerDB');
+async function loadFromSheet(){
+  if(!scriptUrl){showSetup();return;}
+  setSyncStatus('syncing','Loading...');
+  try{
+    const res=await fetch(scriptUrl+'?action=read&secret='+SECRET_KEY,{method:'GET'});
+    const json=await res.json();
+    if(json.ok&&json.data){
+      D=json.data;
+      nid=Math.max(100,...D.master.map(x=>x.id),...D.commitments.map(x=>x.id),...D.debts.map(x=>x.id),...D.tasks.map(x=>x.id),100)+1;
+      setSyncStatus('synced','Synced');
+      showApp();
+      renderAll();
+    } else {
+      setSyncStatus('error','Load failed');
+    }
+  }catch(e){
+    setSyncStatus('offline','Offline');
+    const cached=localStorage.getItem('commitmentCache');
+    if(cached){D=JSON.parse(cached);showApp();renderAll();}
+    else showSetup();
   }
-  let sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME);
-    sheet.getRange(1, 1).setValue('data');
-    sheet.getRange(2, 1).setValue(JSON.stringify(defaultData()));
-  }
-  return sheet;
 }
 
-function defaultData() {
-  return {
-    master: [
-      {id:1,name:'Unifi',cat:'Telco',amount:99},
-      {id:2,name:'Maxis',cat:'Telco',amount:88},
-      {id:3,name:'Celcom',cat:'Telco',amount:79},
-      {id:4,name:'TNB',cat:'Utilities',amount:120},
-      {id:5,name:'Air Selangor',cat:'Utilities',amount:35},
-      {id:6,name:'Netflix',cat:'Subscription',amount:55},
-      {id:7,name:'Spotify',cat:'Subscription',amount:17},
-      {id:8,name:'Petrol',cat:'Transport',amount:150},
-      {id:9,name:'PTPTN',cat:'Education',amount:200},
-      {id:10,name:'Maybank CC',cat:'Credit Card',amount:300},
-      {id:11,name:'Touch n Go',cat:'Transport',amount:80},
-    ],
-    commitments: [],
-    debts: [],
-    tasks: []
+async function saveToSheet(){
+  if(!scriptUrl)return;
+  localStorage.setItem('commitmentCache',JSON.stringify(D));
+  setSyncStatus('syncing','Saving...');
+  try{
+    const res=await fetch(scriptUrl,{
+      method:'POST',
+      body:JSON.stringify({action:'write',secret:SECRET_KEY,data:D})
+    });
+    const json=await res.json();
+    if(json.ok){
+      setSyncStatus('synced','Synced · '+new Date().toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'}));
+    } else {
+      setSyncStatus('error','Save failed');
+    }
+  }catch(e){
+    setSyncStatus('offline','Saved offline');
+  }
+}
+
+function scheduleSave(){
+  localStorage.setItem('commitmentCache',JSON.stringify(D));
+  if(saveTimer)clearTimeout(saveTimer);
+  saveTimer=setTimeout(saveToSheet,1500);
+}
+
+function syncNow(){loadFromSheet()}
+
+async function connectScript(){
+  const url=(document.getElementById('script-url-input').value||'').trim();
+  const errEl=document.getElementById('connect-error');
+  errEl.style.display='none';
+  if(!url||!url.includes('script.google.com')){
+    errEl.textContent='Please paste a valid Google Apps Script URL.';
+    errEl.style.display='block';
+    return;
+  }
+  errEl.textContent='Testing connection...';
+  errEl.style.display='block';
+  errEl.style.color='var(--text2)';
+  try{
+    const res=await fetch(url+'?action=read&secret='+SECRET_KEY);
+    const json=await res.json();
+    if(json.ok){
+      scriptUrl=url;
+      localStorage.setItem(STORAGE_KEY,url);
+      D=json.data;
+      nid=Math.max(100,...D.master.map(x=>x.id),...D.commitments.map(x=>x.id),...D.debts.map(x=>x.id),...D.tasks.map(x=>x.id),100)+1;
+      setSyncStatus('synced','Connected');
+      errEl.style.display='none';
+      showApp();
+      renderAll();
+    } else {
+      errEl.textContent='Connected but got an error. Check your Apps Script code.';
+      errEl.style.color='var(--red)';
+    }
+  }catch(e){
+    errEl.textContent='Cannot reach that URL. Make sure you deployed as Web App with "Anyone" access.';
+    errEl.style.color='var(--red)';
+  }
+}
+
+function showSetup(){
+  document.getElementById('setup-screen').classList.add('show');
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('bottom-nav').style.display='none';
+}
+function showApp(){
+  document.getElementById('setup-screen').classList.remove('show');
+  document.getElementById('main-app').style.display='block';
+  document.getElementById('bottom-nav').style.display='flex';
+}
+
+// ─── RENDER HELPERS ────────────────────────────────────────
+function alertBox(icon,msg){return`<div class="alert-box"><i class="ti ${icon}" style="font-size:16px;flex-shrink:0;margin-top:1px"></i><div>${msg}</div></div>`}
+
+function renderAlerts(){
+  let ch='';
+  D.commitments.forEach(c=>{
+    if(c.paid||!c.due)return;
+    const dl=daysLeft(c.due);if(dl===null)return;
+    const m=getMaster(c.masterId);
+    if(dl<0)ch+=alertBox('ti-alert-triangle',`<b>${m.name}</b> overdue! Due ${fmtD(c.due)}`);
+    else if(c.remindDays&&dl<=c.remindDays)ch+=alertBox('ti-bell-ringing',`<b>${m.name}</b> due in ${dl} day${dl===1?'':'s'} — ${fmtD(c.due)}`);
+  });
+  document.getElementById('alerts-c').innerHTML=ch;
+  let dh='';
+  D.debts.forEach(d=>{
+    if(isSettled(d)||!d.due)return;
+    const dl=daysLeft(d.due);if(dl===null)return;
+    const m=getMaster(d.masterId);
+    const unpaid=d.payments.filter(p=>!p.paid);if(!unpaid.length)return;
+    if(dl<0)dh+=alertBox('ti-alert-triangle',`<b>${m.name}</b> — ${unpaid[0].month} overdue! Pay to <b>${d.where}</b>`);
+    else if(d.remindDays&&dl<=d.remindDays)dh+=alertBox('ti-bell-ringing',`<b>${m.name}</b> — ${unpaid[0].month} due in ${dl}d · Pay to <b>${d.where}</b>`);
+  });
+  document.getElementById('alerts-d').innerHTML=dh;
+}
+
+function renderMaster(){
+  const el=document.getElementById('master-list');
+  if(!D.master.length){el.innerHTML='<div class="empty">No commitments yet.<br>Tap Add to configure your list.</div>';return}
+  const grouped={};CATS.forEach(c=>grouped[c]=[]);
+  D.master.forEach(m=>{if(grouped[m.cat])grouped[m.cat].push(m);else grouped['Other'].push(m)});
+  el.innerHTML=CATS.filter(c=>grouped[c]&&grouped[c].length).map(c=>`
+    <div class="sec-lbl">${c}</div>
+    ${grouped[c].map(m=>`
+      <div class="master-row">
+        <span class="chip ${cc(m.cat)}">${m.cat}</span>
+        <span style="flex:1;font-size:14px;color:var(--text);font-weight:500">${m.name}</span>
+        <span style="font-size:13px;color:var(--text2);min-width:72px;text-align:right">${m.amount?fmtRM(m.amount):'—'}</span>
+        <button class="del" onclick="delMaster(${m.id})" aria-label="Delete"><i class="ti ti-trash"></i></button>
+      </div>`).join('')}`).join('');
+}
+
+function masterOpts(selected){
+  const grouped={};CATS.forEach(c=>grouped[c]=[]);
+  D.master.forEach(m=>{if(grouped[m.cat])grouped[m.cat].push(m);else grouped['Other'].push(m)});
+  let html='<option value="">— choose —</option>';
+  CATS.forEach(c=>{
+    if(!grouped[c]||!grouped[c].length)return;
+    html+=`<optgroup label="${c}">`;
+    grouped[c].forEach(m=>{html+=`<option value="${m.id}"${selected===m.id?' selected':''}>${m.name}${m.amount?' ('+fmtRM(m.amount)+')':''}</option>`});
+    html+='</optgroup>';
+  });
+  return html;
+}
+
+function renderCommitments(){
+  const total=D.commitments.reduce((s,c)=>s+parseFloat(c.amount||0),0);
+  const paid=D.commitments.filter(c=>c.paid).reduce((s,c)=>s+parseFloat(c.amount||0),0);
+  document.getElementById('met-c').innerHTML=`
+    <div class="met"><div class="met-lbl">Total</div><div class="met-val">${fmtRM(total)}</div></div>
+    <div class="met"><div class="met-lbl">Paid</div><div class="met-val grn">${fmtRM(paid)}</div></div>
+    <div class="met"><div class="met-lbl">Balance</div><div class="met-val org">${fmtRM(total-paid)}</div></div>
+    <div class="met"><div class="met-lbl">Status</div><div class="met-val">${D.commitments.filter(c=>c.paid).length}/${D.commitments.length} paid</div></div>`;
+  const el=document.getElementById('list-c');
+  if(!D.commitments.length){el.innerHTML='<div class="empty">No commitments yet.<br>Configure your master list first, then tap Add.</div>';return}
+  const sorted=[...D.commitments].sort((a,b)=>a.paid-b.paid);
+  const unpaid=sorted.filter(c=>!c.paid),pdone=sorted.filter(c=>c.paid);
+  let html='';
+  if(unpaid.length)html+=`<div class="sec-lbl">Pending</div>`+unpaid.map(cRow).join('');
+  if(pdone.length)html+=`<div class="sec-lbl">Paid</div>`+pdone.map(cRow).join('');
+  el.innerHTML=html;
+}
+
+function cRow(c){
+  const m=getMaster(c.masterId);
+  const dl=c.due?daysLeft(c.due):null;
+  let dlH='';
+  if(dl!==null){
+    if(dl<0)dlH=`<span class="chip chip-red">Overdue</span>`;
+    else if(dl===0)dlH=`<span class="chip chip-org">Today</span>`;
+    else if(c.remindDays&&dl<=c.remindDays)dlH=`<span class="chip chip-org">In ${dl}d</span>`;
+    else dlH=`<span class="chip chip-gry">In ${dl}d</span>`;
+  }
+  const meta=[];
+  if(c.due)meta.push(`Due ${fmtD(c.due)}`);
+  if(c.remindDays)meta.push(`Remind ${c.remindDays}d before`);
+  return`<div class="c-row" id="crow-${c.id}">
+    <input type="checkbox" class="chk" ${c.paid?'checked':''} onchange="togglePaid(${c.id})" style="margin-top:2px" />
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-size:15px;font-weight:600;color:var(--text);${c.paid?'text-decoration:line-through;color:var(--text3)':''}">${m.name}</span>
+        <span class="chip ${cc(m.cat)}">${m.cat}</span>${dlH}
+      </div>
+      ${meta.length?`<div class="rsub">${meta.join(' · ')}</div>`:''}
+    </div>
+    <span class="amt-display ${c.paid?'paid':''}" onclick="startEditAmt(${c.id})" title="Tap to edit">
+      ${fmtRM(c.amount)}&nbsp;<i class="ti ti-pencil" style="font-size:11px;color:var(--text3)"></i>
+    </span>
+    <button class="del" onclick="delItem('commitments',${c.id})" aria-label="Delete"><i class="ti ti-trash"></i></button>
+  </div>`;
+}
+
+function startEditAmt(id){
+  const c=D.commitments.find(x=>x.id===id);if(!c)return;
+  const span=document.querySelector(`#crow-${id} .amt-display`);if(!span)return;
+  const input=document.createElement('input');
+  input.type='number';input.className='amt-input';
+  input.value=c.amount;input.min='0';input.step='0.01';input.inputMode='decimal';
+  span.replaceWith(input);input.focus();input.select();
+  const commit=()=>{
+    const val=parseFloat(input.value);
+    if(!isNaN(val)&&val>=0){c.amount=val;scheduleSave();}
+    renderCommitments();renderReport();
   };
+  input.addEventListener('blur',commit);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();input.blur();}if(e.key==='Escape')input.blur();});
 }
 
-function doGet(e) {
-  // Check secret key
-  if (!checkSecret(e.parameter.secret)) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ok: false, error: 'Unauthorised'}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  const action = e.parameter.action;
-
-  if (action === 'read') {
-    const sheet = getSheet();
-    const raw = sheet.getRange(2, 1).getValue();
-    let data;
-    try { data = JSON.parse(raw); } catch(err) { data = defaultData(); }
-    return ContentService
-      .createTextOutput(JSON.stringify({ok: true, data: data}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  return ContentService
-    .createTextOutput(JSON.stringify({ok: false, error: 'Unknown action'}))
-    .setMimeType(ContentService.MimeType.JSON);
+function togglePaid(id){
+  const c=D.commitments.find(x=>x.id===id);
+  if(c){c.paid=!c.paid;scheduleSave();renderAll();}
 }
 
-function doPost(e) {
-  try {
-    const body = JSON.parse(e.postData.contents);
+function renderDebt(){
+  const totalOrig=D.debts.reduce((s,d)=>s+d.originalAmount,0);
+  const totalPaid=D.debts.reduce((s,d)=>s+paidTotal(d),0);
+  const totalRem=D.debts.reduce((s,d)=>s+remainingDebt(d),0);
+  document.getElementById('met-d').innerHTML=`
+    <div class="met"><div class="met-lbl">Original</div><div class="met-val red">${fmtRM(totalOrig)}</div></div>
+    <div class="met"><div class="met-lbl">Paid</div><div class="met-val grn">${fmtRM(totalPaid)}</div></div>
+    <div class="met"><div class="met-lbl">Remaining</div><div class="met-val org">${fmtRM(totalRem)}</div></div>
+    <div class="met"><div class="met-lbl">Settled</div><div class="met-val">${D.debts.filter(d=>isSettled(d)).length}/${D.debts.length}</div></div>`;
+  const el=document.getElementById('list-d');
+  if(!D.debts.length){el.innerHTML='<div class="empty">No debts recorded yet.<br>Tap Add to start tracking.</div>';return}
+  el.innerHTML=D.debts.map(debtCard).join('');
+}
 
-    // Check secret key
-    if (!checkSecret(body.secret)) {
-      return ContentService
-        .createTextOutput(JSON.stringify({ok: false, error: 'Unauthorised'}))
-        .setMimeType(ContentService.MimeType.JSON);
+function debtCard(d){
+  const m=getMaster(d.masterId);
+  const rem=remainingDebt(d),ptot=paidTotal(d),p=pctD(d),settled=isSettled(d);
+  const pbarColor=settled?'#1D9E75':(p>50?'#BA7517':'#e24b4a');
+  const whereIcon=d.wheretype==='Person'?'ti-user':'ti-building-bank';
+  const paidCount=d.payments.filter(p=>p.paid).length;
+  const nextUnpaid=d.payments.find(p=>!p.paid);
+  const isOpen=!!expanded[d.id];
+  const now=new Date();
+  const monthOpts=[];
+  for(let i=0;i<12;i++){const d2=new Date(now.getFullYear(),now.getMonth()+i,1);monthOpts.push(`<option>${MONTHS[d2.getMonth()]} ${d2.getFullYear()}</option>`);}
+  const payRows=d.payments.map((pay,idx)=>{
+    const isNext=!pay.paid&&d.payments.slice(0,idx).every(pp=>pp.paid);
+    return`<div class="pay-row">
+      <input type="checkbox" class="chk" ${pay.paid?'checked':''} onchange="togglePayment(${d.id},${pay.id})" />
+      <span class="pay-month ${pay.paid?'done':''}">${pay.month}${isNext?'&nbsp;<span class="chip chip-org" style="font-size:10px">Next</span>':''}</span>
+      <span class="pay-amt" style="color:${pay.paid?'var(--green)':'var(--text)'}">${fmtRM(pay.amount)}</span>
+      <button class="pay-del" onclick="delPayment(${d.id},${pay.id})" aria-label="Remove"><i class="ti ti-x"></i></button>
+    </div>`;
+  }).join('');
+  const accSummary=settled
+    ?`<span class="settled-badge"><i class="ti ti-circle-check" style="font-size:13px"></i>Settled</span>`
+    :`<span style="font-size:12px;color:var(--text2)">${paidCount}/${d.payments.length} paid${nextUnpaid?` · Next: <b style="color:var(--text)">${nextUnpaid.month}</b>`:''}</span>`;
+  const meta=[];
+  if(d.due)meta.push(`Due ${fmtD(d.due)}`);
+  if(d.remindDays&&d.due)meta.push(`Remind ${d.remindDays}d before`);
+  meta.push(`<i class="ti ${whereIcon}" style="font-size:11px;vertical-align:-1px"></i> ${d.where}`);
+  if(d.interest)meta.push(`${d.rate}% p.a.`);else meta.push('No interest');
+  if(d.tenure>1)meta.push(`${d.tenure} months`);
+  return`<div class="debt-card">
+    <div class="debt-main">
+      <div class="debt-top">
+        <div style="flex:1;min-width:0">
+          <div class="debt-name">${m.name}
+            <span class="chip ${cc(m.cat)}">${m.cat}</span>
+            <span class="chip ${d.payType==='Lump sum'?'chip-red':'chip-pur'}">${d.payType}</span>
+            ${settled?'<span class="settled-badge"><i class="ti ti-circle-check" style="font-size:12px"></i>Settled</span>':''}
+          </div>
+          <div class="debt-meta">${meta.join(' · ')}</div>
+        </div>
+        <button class="del" onclick="delDebt(${d.id})" aria-label="Delete"><i class="ti ti-trash"></i></button>
+      </div>
+      <div class="d-amts">
+        <div class="d-amt"><div class="d-amt-lbl">Original</div><div class="d-amt-val" style="color:var(--red)">${fmtRM(d.originalAmount)}</div></div>
+        <div class="d-amt"><div class="d-amt-lbl">Paid</div><div class="d-amt-val" style="color:var(--green)">${fmtRM(ptot)}</div></div>
+        <div class="d-amt"><div class="d-amt-lbl">Remaining</div><div class="d-amt-val" style="color:${settled?'var(--green)':'var(--orange)'}">${fmtRM(rem)}</div></div>
+      </div>
+      <div class="pbar-row">
+        <div class="pbar-wrap"><div class="pbar" style="width:${p}%;background:${pbarColor}"></div></div>
+        <span style="font-size:12px;color:var(--text2);white-space:nowrap;min-width:36px;text-align:right">${p}%</span>
+      </div>
+    </div>
+    <button class="acc-btn" onclick="toggleAcc(${d.id})">
+      <span class="acc-left"><i class="ti ti-calendar-check" style="font-size:15px"></i>Payment checklist</span>
+      <span class="acc-right">${accSummary}<i class="ti ti-chevron-down chevron ${isOpen?'open':''}" style="font-size:16px"></i></span>
+    </button>
+    <div class="acc-body ${isOpen?'open':''}">
+      ${payRows}
+      <div class="add-pay-row">
+        <select id="sel-${d.id}" style="flex:1">${monthOpts}</select>
+        <input type="number" id="amt-${d.id}" value="${d.monthlyAmount}" style="width:85px" min="0" step="0.01" inputmode="decimal" />
+        <button class="btn btn-primary" style="padding:8px 11px;flex-shrink:0" onclick="addPayment(${d.id})"><i class="ti ti-plus" style="font-size:14px"></i></button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleAcc(id){expanded[id]=!expanded[id];renderDebt()}
+function togglePayment(debtId,payId){
+  const d=D.debts.find(x=>x.id===debtId);if(!d)return;
+  const p=d.payments.find(x=>x.id===payId);
+  if(p){p.paid=!p.paid;scheduleSave();renderAll();}
+}
+function addPayment(debtId){
+  const d=D.debts.find(x=>x.id===debtId);if(!d)return;
+  const month=document.getElementById('sel-'+debtId).value;
+  const amount=parseFloat(document.getElementById('amt-'+debtId).value)||d.monthlyAmount;
+  d.payments.push({id:++nid,month,amount,paid:false});
+  scheduleSave();renderAll();
+}
+function delPayment(debtId,payId){
+  const d=D.debts.find(x=>x.id===debtId);
+  if(d){d.payments=d.payments.filter(x=>x.id!==payId);scheduleSave();renderAll();}
+}
+function delDebt(id){
+  if(!confirm('Delete this debt?'))return;
+  delete expanded[id];D.debts=D.debts.filter(x=>x.id!==id);scheduleSave();renderAll();
+}
+
+function renderTasks(){
+  const el=document.getElementById('list-t');
+  if(!D.tasks.length){el.innerHTML='<div class="empty">No tasks yet.<br>Tap Add to create one.</div>';document.getElementById('tprog').style.display='none';return}
+  const sorted=[...D.tasks].sort((a,b)=>a.done-b.done||(a.date||'').localeCompare(b.date||''));
+  el.innerHTML=sorted.map(t=>{
+    const m=getMaster(t.masterId);
+    const name=t.customName||m.name;
+    const dl=t.date?daysLeft(t.date):null;
+    let dlH='';
+    if(dl!==null&&!t.done){if(dl<0)dlH=`<span class="chip chip-red">Overdue</span>`;else if(dl===0)dlH=`<span class="chip chip-org">Today</span>`;else dlH=`<span class="chip chip-gry">In ${dl}d</span>`;}
+    return`<div class="task-row">
+      <input type="checkbox" class="chk" ${t.done?'checked':''} onchange="toggleTask(${t.id})" style="margin-top:2px" />
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="font-size:15px;font-weight:600;color:var(--text);${t.done?'text-decoration:line-through;color:var(--text3)':''}">${name}</span>
+          <span class="chip ${cc(m.cat)}">${m.cat}</span>${dlH}
+        </div>
+        <div class="rsub">${t.date?fmtD(t.date):''} ${t.note?'· '+t.note:''}</div>
+      </div>
+      <button class="del" onclick="delItem('tasks',${t.id})" aria-label="Delete"><i class="ti ti-trash"></i></button>
+    </div>`;
+  }).join('');
+  const done=D.tasks.filter(t=>t.done).length;
+  const p=Math.round(done/D.tasks.length*100);
+  document.getElementById('tprog').style.display='block';
+  document.getElementById('tpct').textContent=p+'%';
+  document.getElementById('pfill').style.width=p+'%';
+}
+function toggleTask(id){const t=D.tasks.find(x=>x.id===id);if(t){t.done=!t.done;scheduleSave();renderAll();}}
+
+function delMaster(id){
+  if(!confirm('Delete this commitment? It will also be removed from Commitments, Debts and Tasks.'))return;
+  D.master=D.master.filter(x=>x.id!==id);
+  D.commitments=D.commitments.filter(x=>x.masterId!==id);
+  D.debts=D.debts.filter(x=>x.masterId!==id);
+  D.tasks=D.tasks.filter(x=>x.masterId!==id);
+  scheduleSave();renderAll();
+}
+function delItem(type,id){
+  if(!confirm('Delete this item?'))return;
+  D[type]=D[type].filter(x=>x.id!==id);scheduleSave();renderAll();
+}
+
+function renderReport(){
+  const totalC=D.commitments.reduce((s,c)=>s+parseFloat(c.amount||0),0);
+  const paidC=D.commitments.filter(c=>c.paid).reduce((s,c)=>s+parseFloat(c.amount||0),0);
+  const totalRem=D.debts.reduce((s,d)=>s+remainingDebt(d),0);
+  const totalPaidD=D.debts.reduce((s,d)=>s+paidTotal(d),0);
+  const mn=new Date().toLocaleString('en-MY',{month:'long',year:'numeric'});
+  document.getElementById('rpt-content').innerHTML=`
+  <div class="card">
+    <div class="card-title" style="margin-bottom:.75rem"><i class="ti ti-chart-bar" style="font-size:15px"></i>Summary — ${mn}</div>
+    <div class="metrics" style="margin-bottom:0">
+      <div class="met"><div class="met-lbl">Commitments</div><div class="met-val">${fmtRM(totalC)}</div></div>
+      <div class="met"><div class="met-lbl">Paid</div><div class="met-val grn">${fmtRM(paidC)}</div></div>
+      <div class="met"><div class="met-lbl">Balance</div><div class="met-val org">${fmtRM(totalC-paidC)}</div></div>
+      <div class="met"><div class="met-lbl">Debt left</div><div class="met-val red">${fmtRM(totalRem)}</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:.75rem"><i class="ti ti-wallet" style="font-size:15px"></i>Commitments</div>
+    <div style="overflow-x:auto"><table class="rpt">
+      <thead><tr><th style="width:30%">Name</th><th style="width:18%">Cat</th><th style="width:20%">Amount</th><th style="width:18%">Due</th><th style="width:14%">Status</th></tr></thead>
+      <tbody>${D.commitments.length?D.commitments.map(c=>{const m=getMaster(c.masterId);return`<tr>
+        <td>${m.name}</td><td><span class="chip ${cc(m.cat)}">${m.cat}</span></td>
+        <td>${fmtRM(c.amount)}</td><td>${c.due?fmtD(c.due):'—'}</td>
+        <td><span class="chip ${c.paid?'chip-grn':'chip-org'}">${c.paid?'Paid':'Pending'}</span></td>
+      </tr>`}).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:1rem">No commitments yet</td></tr>'}</tbody>
+    </table></div>
+    <div class="rpt-total"><span>Total</span><span>${fmtRM(totalC)}</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:.75rem"><i class="ti ti-credit-card" style="font-size:15px"></i>Debts</div>
+    <div style="overflow-x:auto"><table class="rpt">
+      <thead><tr><th style="width:20%">Name</th><th style="width:18%">Original</th><th style="width:18%">Paid</th><th style="width:18%">Remaining</th><th style="width:10%">%</th><th style="width:16%">Pay to</th></tr></thead>
+      <tbody>${D.debts.length?D.debts.map(d=>{const m=getMaster(d.masterId);const p=pctD(d),s=isSettled(d);return`<tr>
+        <td>${m.name}</td><td>${fmtRM(d.originalAmount)}</td>
+        <td style="color:var(--green)">${fmtRM(paidTotal(d))}</td>
+        <td style="color:${s?'var(--green)':'var(--red)'}">${fmtRM(remainingDebt(d))}</td>
+        <td><span class="chip ${s?'chip-grn':p>50?'chip-org':'chip-red'}">${p}%</span></td>
+        <td style="white-space:normal">${d.where}</td>
+      </tr>`}).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:1rem">No debts yet</td></tr>'}</tbody>
+    </table></div>
+    <div class="rpt-total" style="color:var(--red)"><span>Total remaining</span><span>${fmtRM(totalRem)}</span></div>
+  </div>`;
+}
+
+function renderAll(){renderAlerts();renderMaster();renderCommitments();renderDebt();renderTasks();renderReport()}
+
+function sw(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── MODAL ─────────────────────────────────────────────────
+function openM(type){
+  curM=type;
+  let title='',body='';
+  if(type==='master'){
+    title='Add to master list';
+    body=`
+      <div class="fld"><label>Name</label><input type="text" id="f-name" placeholder="e.g. Maxis, TNB, Astro..." autocomplete="off" /></div>
+      <div class="half">
+        <div class="fld"><label>Category</label><select id="f-cat">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
+        <div class="fld"><label>Default amount (RM) <span class="opt-lbl">optional</span></label><input type="number" id="f-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" /></div>
+      </div>`;
+  } else if(type==='commitment'){
+    title='Add commitment';
+    body=`
+      <div class="fld"><label>Commitment</label><select id="f-master" onchange="autoFillAmt()">${masterOpts()}</select></div>
+      <div class="fld"><label>Amount this month (RM)</label>
+        <input type="number" id="f-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Pre-fills from default. Tap the amount later to change.</div>
+      </div>
+      <div class="half">
+        <div class="fld"><label>Due date <span class="opt-lbl">optional</span></label><input type="date" id="f-due" /></div>
+        <div class="fld"><label>Remind before <span class="opt-lbl">optional</span></label><input type="number" id="f-remind" placeholder="days" min="1" max="30" inputmode="numeric" /></div>
+      </div>`;
+  } else if(type==='debt'){
+    title='Add debt / loan';
+    const now=new Date();
+    const mOpts=[];
+    for(let i=0;i<12;i++){const d2=new Date(now.getFullYear(),now.getMonth()+i,1);mOpts.push(`<option>${MONTHS[d2.getMonth()]} ${d2.getFullYear()}</option>`);}
+    body=`
+      <div class="fld"><label>Commitment</label><select id="f-master">${masterOpts()}</select></div>
+      <div class="half">
+        <div class="fld"><label>Total owed (RM)</label><input type="number" id="f-total" placeholder="0.00" min="0" step="0.01" inputmode="decimal" /></div>
+        <div class="fld"><label>Monthly payment (RM)</label><input type="number" id="f-monthly" placeholder="0.00" min="0" step="0.01" inputmode="decimal" /></div>
+      </div>
+      <div class="half">
+        <div class="fld"><label>Payment type</label><select id="f-paytype" onchange="toggleTenure()"><option>Installment</option><option>Lump sum</option></select></div>
+        <div class="fld" id="tenure-row"><label>Tenure (months)</label><input type="number" id="f-tenure" placeholder="e.g. 60" min="1" inputmode="numeric" /></div>
+      </div>
+      <div class="half">
+        <div class="fld"><label>Interest?</label><select id="f-int" onchange="toggleRate()"><option value="yes">Yes</option><option value="no">No</option></select></div>
+        <div class="fld" id="rate-row"><label>Rate (% p.a.)</label><input type="number" id="f-rate" value="0" min="0" step="0.1" inputmode="decimal" /></div>
+      </div>
+      <div class="half">
+        <div class="fld"><label>Due date <span class="opt-lbl">optional</span></label><input type="date" id="f-due" /></div>
+        <div class="fld"><label>Remind before <span class="opt-lbl">optional</span></label><input type="number" id="f-remind" placeholder="days" min="1" inputmode="numeric" /></div>
+      </div>
+      <div class="half">
+        <div class="fld"><label>Pay to</label><input type="text" id="f-where" placeholder="e.g. BSN, Maybank, Ali..." autocomplete="off" /></div>
+        <div class="fld"><label>Type</label><select id="f-wheretype"><option>Bank</option><option>Person</option></select></div>
+      </div>
+      <div class="half">
+        <div class="fld"><label>First payment month</label><select id="f-startmonth">${mOpts}</select></div>
+        <div class="fld"><label>Pre-generate months</label><input type="number" id="f-genmths" value="3" min="1" max="60" inputmode="numeric" /></div>
+      </div>`;
+  } else if(type==='task'){
+    title='Add task';
+    body=`
+      <div class="fld"><label>Commitment</label><select id="f-master">${masterOpts()}</select></div>
+      <div class="fld"><label>Custom name <span class="opt-lbl">optional</span></label><input type="text" id="f-custom" placeholder="Leave blank to use commitment name" autocomplete="off" /></div>
+      <div class="fld"><label>Date <span class="opt-lbl">optional</span></label><input type="date" id="f-date" /></div>
+      <div class="fld"><label>Note <span class="opt-lbl">optional</span></label><input type="text" id="f-note" placeholder="Any notes..." autocomplete="off" /></div>`;
+  }
+  document.getElementById('mtitle').textContent=title;
+  document.getElementById('mbody').innerHTML=body;
+  document.getElementById('mwrap').classList.add('show');
+  setTimeout(()=>{const fn=document.getElementById('f-name')||document.getElementById('f-master');if(fn)fn.focus();},100);
+}
+
+function autoFillAmt(){
+  const sel=document.getElementById('f-master');
+  const amtEl=document.getElementById('f-amount');
+  if(!sel||!amtEl)return;
+  const m=getMaster(parseInt(sel.value));
+  if(m&&m.amount)amtEl.value=m.amount;
+}
+function toggleTenure(){const v=document.getElementById('f-paytype').value;const tr=document.getElementById('tenure-row');if(tr)tr.style.display=v==='Installment'?'':'none'}
+function toggleRate(){const v=document.getElementById('f-int').value;const rr=document.getElementById('rate-row');if(rr)rr.style.display=v==='yes'?'':'none'}
+function closeM(){document.getElementById('mwrap').classList.remove('show')}
+function closeModalBg(e){if(e.target.id==='mwrap')closeM()}
+
+function saveM(){
+  const id=++nid;
+  const gv=i=>{const el=document.getElementById(i);return el?el.value:''};
+  const gf=i=>{const el=document.getElementById(i);return el?parseFloat(el.value)||0:0};
+  if(curM==='master'){
+    const name=(gv('f-name')||'').trim();if(!name){alert('Please enter a name.');return;}
+    D.master.push({id,name,cat:gv('f-cat'),amount:gf('f-amount')});
+  } else if(curM==='commitment'){
+    const masterId=parseInt(gv('f-master'));if(!masterId){alert('Please choose a commitment.');return;}
+    D.commitments.push({id,masterId,amount:gf('f-amount'),due:gv('f-due')||'',paid:false,remindDays:gv('f-remind')?parseInt(gv('f-remind')):null});
+  } else if(curM==='debt'){
+    const masterId=parseInt(gv('f-master'));if(!masterId){alert('Please choose a commitment.');return;}
+    const total=gf('f-total'),monthly=gf('f-monthly')||total;
+    const tenure=parseInt(gv('f-tenure'))||1;
+    const genMths=Math.min(parseInt(gv('f-genmths'))||3,60);
+    const startMonth=gv('f-startmonth');
+    let[sM,sY]=startMonth.split(' ');
+    let mIdx=MONTHS.indexOf(sM),yr=parseInt(sY);
+    const payments=[];
+    for(let i=0;i<genMths;i++){
+      payments.push({id:++nid,month:`${MONTHS[mIdx]} ${yr}`,amount:monthly,paid:false});
+      mIdx++;if(mIdx>11){mIdx=0;yr++;}
     }
-
-    const action = body.action;
-
-    if (action === 'write') {
-      const sheet = getSheet();
-      sheet.getRange(2, 1).setValue(JSON.stringify(body.data));
-      return ContentService
-        .createTextOutput(JSON.stringify({ok: true}))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-
-    return ContentService
-      .createTextOutput(JSON.stringify({ok: false, error: 'Unknown action'}))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ok: false, error: err.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
+    D.debts.push({id,masterId,payType:gv('f-paytype'),originalAmount:total,monthlyAmount:monthly,tenure,interest:gv('f-int')==='yes',rate:gf('f-rate'),due:gv('f-due')||'',where:gv('f-where'),wheretype:gv('f-wheretype'),remindDays:gv('f-remind')?parseInt(gv('f-remind')):null,payments});
+    expanded[id]=true;
+  } else if(curM==='task'){
+    const masterId=parseInt(gv('f-master'));if(!masterId){alert('Please choose a commitment.');return;}
+    D.tasks.push({id,masterId,customName:gv('f-custom'),date:gv('f-date'),done:false,note:gv('f-note')});
   }
+  scheduleSave();closeM();renderAll();
 }
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM()});
+document.getElementById('dt') && (document.getElementById('dt').textContent=new Date().toLocaleDateString('en-MY',{weekday:'short',day:'numeric',month:'short',year:'numeric'}));
+
+// ─── BOOT ──────────────────────────────────────────────────
+scriptUrl=localStorage.getItem(STORAGE_KEY)||'';
+if(scriptUrl){
+  loadFromSheet();
+} else {
+  showSetup();
+}
+
+// PWA manifest
+const manifest={name:'Commitment Manager',short_name:'Commitments',start_url:location.href,display:'standalone',background_color:'#ffffff',theme_color:'#1D9E75',icons:[{src:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%231D9E75"/><text y=".9em" font-size="68" x="14">📋</text></svg>',sizes:'any',type:'image/svg+xml'}]};
+const mb=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+const ml=document.createElement('link');ml.rel='manifest';ml.href=URL.createObjectURL(mb);
+document.head.appendChild(ml);
+</script>
+</body>
+</html>
