@@ -848,7 +848,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM()});
 document.getElementById('dt') && (document.getElementById('dt').textContent=new Date().toLocaleDateString('en-MY',{weekday:'short',day:'numeric',month:'short',year:'numeric'}));
 
 // ─── BOOT ──────────────────────────────────────────────────
-scriptUrl=localStorage.getItem(STORAGE_KEY)||'';
+scriptUrl=localStorage.getItem(STORAGE_KEY)||'https://script.google.com/macros/s/AKfycbwA32o8qd6_8J_5iv6H-_cpxMdAmdjrgC9mwnKYNEwaZKpPLATbd8IK2CZbkdRFup3l/exec';
 if(scriptUrl){
   loadFromSheet();
 } else {
