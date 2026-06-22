@@ -211,19 +211,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sa
 .cal-day.selected{background:var(--primary-bg);color:var(--primary);font-weight:700;border:1.5px solid var(--primary)}
 .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
 
-/* ── LOGIN ── */
-.login-screen{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:var(--bg)}
-.login-screen.show{display:flex}
-.login-logo{width:80px;height:80px;background:linear-gradient(135deg,var(--primary),#A855F7);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:1.5rem;box-shadow:var(--shadow-lg)}
-.login-title{font-size:28px;font-weight:900;background:linear-gradient(135deg,var(--primary),#A855F7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem}
-.login-sub{font-size:14px;color:var(--text2);text-align:center;margin-bottom:2rem;line-height:1.6}
-.google-btn{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #E0E0E0;border-radius:50px;padding:12px 24px;font-size:15px;font-weight:700;color:#3C4043;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:all .2s;width:100%;max-width:300px;justify-content:center}
-.google-btn:hover{box-shadow:0 4px 16px rgba(0,0,0,.18);transform:translateY(-1px)}
-.google-btn img{width:22px;height:22px}
-.login-features{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2rem;width:100%;max-width:320px}
-.login-feature{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);font-weight:500}
-.login-feature i{font-size:18px;color:var(--primary)}
-
 /* ── SETUP ── */
 .setup-screen{display:none;padding:1.5rem;max-width:500px;margin:0 auto}
 .setup-screen.show{display:block}
@@ -263,27 +250,6 @@ table.rpt tr:last-child td{border-bottom:none}
 </head>
 <body>
 
-<!-- ═══ LOGIN SCREEN ═══ -->
-<div class="login-screen" id="login-screen">
-  <div class="login-logo">📋</div>
-  <div class="login-title">LifeHub</div>
-  <p class="login-sub">Your all-in-one life management app.<br>Sign in with Google to get started.</p>
-  <button class="google-btn" onclick="signInGoogle()">
-    <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-    Continue with Google
-  </button>
-  <div class="login-features">
-    <div class="login-feature"><i class="ti ti-wallet"></i>Commitments</div>
-    <div class="login-feature"><i class="ti ti-credit-card"></i>Debt Tracker</div>
-    <div class="login-feature"><i class="ti ti-checkbox"></i>Tasks</div>
-    <div class="login-feature"><i class="ti ti-chart-bar"></i>Reports</div>
-    <div class="login-feature"><i class="ti ti-scale"></i>Weight</div>
-    <div class="login-feature"><i class="ti ti-piggy-bank"></i>Savings</div>
-    <div class="login-feature"><i class="ti ti-calendar"></i>Calendar</div>
-    <div class="login-feature"><i class="ti ti-shield-check"></i>Private</div>
-  </div>
-</div>
-
 <!-- ═══ SETUP SCREEN ═══ -->
 <div class="setup-screen" id="setup-screen">
   <div style="text-align:center;padding:1rem 0 1.5rem">
@@ -314,7 +280,7 @@ table.rpt tr:last-child td{border-bottom:none}
   <div class="topbar-right">
     <div class="sync-pill synced" id="sync-status"><i class="ti ti-cloud-check" style="font-size:13px"></i><span id="sync-txt">Synced</span></div>
     <button class="btn-icon" onclick="syncNow()" title="Sync"><i class="ti ti-refresh" style="font-size:16px"></i></button>
-    <div class="user-avatar-placeholder" id="user-avatar" onclick="showUserMenu()" title="Account">M</div>
+    
   </div>
 </div>
 
@@ -438,7 +404,6 @@ let nid=200,curM='',expanded={},scriptUrl='',saveTimer=null;
 let currentMonth=nowM(),currentYear=nowY();
 let taskView='list',moreTab='weight';
 let currentReportMonth=nowM(),currentReportYear=nowY();
-let userInfo=null;
 
 let D={
   master:[
@@ -462,31 +427,6 @@ let D={
   creditCards:[],
   savings:[]
 };
-
-// ══════════════════════════════════════════════
-// GOOGLE SIGN IN (simulated — stores user in localStorage)
-// ══════════════════════════════════════════════
-function signInGoogle(){
-  // Since we can't do real OAuth without a backend, we simulate login
-  // by asking for the user's Google email
-  const email=prompt('Enter your Google email to sign in:');
-  if(!email||!email.includes('@')){return;}
-  const name=email.split('@')[0];
-  userInfo={email,name:name.charAt(0).toUpperCase()+name.slice(1)};
-  localStorage.setItem('lifehubUser',JSON.stringify(userInfo));
-  document.getElementById('user-avatar').textContent=userInfo.name[0].toUpperCase();
-  document.getElementById('login-screen').classList.remove('show');
-  checkSetup();
-}
-
-function showUserMenu(){
-  if(!userInfo)return;
-  if(confirm(`Signed in as ${userInfo.email}\n\nSign out?`)){
-    localStorage.removeItem('lifehubUser');
-    localStorage.removeItem(STORAGE_KEY);
-    location.reload();
-  }
-}
 
 // ══════════════════════════════════════════════
 // SYNC
@@ -592,24 +532,15 @@ async function connectScript(){
 // ══════════════════════════════════════════════
 // SCREEN MANAGEMENT
 // ══════════════════════════════════════════════
-function showLogin(){
-  document.getElementById('login-screen').classList.add('show');
-  document.getElementById('setup-screen').classList.remove('show');
-  document.getElementById('main-app').style.display='none';
-  document.getElementById('bottom-nav').style.display='none';
-}
 function showSetupScreen(){
-  document.getElementById('login-screen').classList.remove('show');
   document.getElementById('setup-screen').classList.add('show');
   document.getElementById('main-app').style.display='none';
   document.getElementById('bottom-nav').style.display='none';
 }
 function showApp(){
-  document.getElementById('login-screen').classList.remove('show');
   document.getElementById('setup-screen').classList.remove('show');
   document.getElementById('main-app').style.display='block';
   document.getElementById('bottom-nav').style.display='flex';
-  if(userInfo){document.getElementById('user-avatar').textContent=userInfo.name[0].toUpperCase();}
 }
 function checkSetup(){
   scriptUrl=localStorage.getItem(STORAGE_KEY)||'https://script.google.com/macros/s/AKfycbwA32o8qd6_8J_5iv6H-_cpxMdAmdjrgC9mwnKYNEwaZKpPLATbd8IK2CZbkdRFup3l/exec';
@@ -976,7 +907,8 @@ function renderWeight(){
     html+=`<div class="weight-history">`+entries.slice(0,20).map((e,i)=>{
       const prev=entries[i+1];
       const diff=prev?e.kg-prev.kg:0;
-      const diffStr=diff!==0?`<span style="color:${diff>0?'var(--red)':'var(--green)';font-size:11px">${diff>0?'+':''}${diff.toFixed(1)}</span>`:'';
+      const diffColor=diff>0?'var(--red)':'var(--green)';
+      const diffStr=diff!==0?`<span style="color:${diffColor};font-size:11px">${diff>0?'+':''}${diff.toFixed(1)}</span>`:'';  
       return`<div class="weight-row">
         <div style="flex:1">
           <div style="font-size:14px;font-weight:600;color:var(--text)">${e.kg} kg ${diffStr}</div>
@@ -1213,7 +1145,7 @@ function renderDashboard(){
   const totalSaved=D.savings.reduce((s,g)=>s+parseFloat(g.saved||0),0);
   const latestWeight=D.weight.sort((a,b)=>b.date.localeCompare(a.date))[0];
   const hour=new Date().getHours();
-  const greeting=hour<12?'Good morning':'hour<17?Good afternoon':'Good evening';
+  const greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
   const name=userInfo?`, ${userInfo.name}`:'';
 
   let alertCount=0;
@@ -1606,7 +1538,7 @@ function generateMonthOptions(){
   const now=new Date();
   let opts='';
   // 6 months back + 6 months forward
-  for(let i=-6;i<=6;i++){
+  for(let i=-12;i<=24;i++){
     const d=new Date(now.getFullYear(),now.getMonth()+i,1);
     const mk=monthKey(d.getFullYear(),d.getMonth());
     const label=`${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
@@ -1723,14 +1655,8 @@ function renderAll(){
 // ══════════════════════════════════════════════
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM();});
 
-// Check login
-const savedUser=localStorage.getItem('lifehubUser');
-if(savedUser){
-  userInfo=JSON.parse(savedUser);
-  checkSetup();
-} else {
-  showLogin();
-}
+// Boot
+checkSetup();
 
 // PWA manifest
 const manifest={name:'LifeHub',short_name:'LifeHub',start_url:location.href,display:'standalone',background_color:'#ffffff',theme_color:'#6C63FF',icons:[{src:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%236C63FF"/><text y=".9em" font-size="68" x="14">📋</text></svg>',sizes:'any',type:'image/svg+xml'}]};
