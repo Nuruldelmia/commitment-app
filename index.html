@@ -612,7 +612,7 @@ function showApp(){
   if(userInfo){document.getElementById('user-avatar').textContent=userInfo.name[0].toUpperCase();}
 }
 function checkSetup(){
-  scriptUrl=localStorage.getItem(STORAGE_KEY)||'https://script.google.com/macros/s/AKfycbwA32o8qd6_8J_5iv6H-_cpxMdAmdjrgC9mwnKYNEwaZKpPLATbd8IK2CZbkdRFup3l/exec';
+  scriptUrl=localStorage.getItem(STORAGE_KEY)||'';
   if(scriptUrl){loadFromSheet();}
   else{showSetupScreen();}
 }
@@ -976,7 +976,7 @@ function renderWeight(){
     html+=`<div class="weight-history">`+entries.slice(0,20).map((e,i)=>{
       const prev=entries[i+1];
       const diff=prev?e.kg-prev.kg:0;
-      const diffStr=diff!==0?`<span style="color:${diff>0?'var(--red)':'var(--green)';font-size:11px">${diff>0?'+':''}${diff.toFixed(1)}</span>`:'';
+      const diffStr=diff!==0?`<span style="color:${diff>0?'var(--red)':'var(--green)'};font-size:11px">${diff>0?'+':''}${diff.toFixed(1)}</span>`:'';
       return`<div class="weight-row">
         <div style="flex:1">
           <div style="font-size:14px;font-weight:600;color:var(--text)">${e.kg} kg ${diffStr}</div>
@@ -1213,7 +1213,7 @@ function renderDashboard(){
   const totalSaved=D.savings.reduce((s,g)=>s+parseFloat(g.saved||0),0);
   const latestWeight=D.weight.sort((a,b)=>b.date.localeCompare(a.date))[0];
   const hour=new Date().getHours();
-  const greeting=hour<12?'Good morning':'hour<17?Good afternoon':'Good evening';
+  const greeting=hour<12?'Good morning':(hour<17?'Good afternoon':'Good evening');
   const name=userInfo?`, ${userInfo.name}`:'';
 
   let alertCount=0;
