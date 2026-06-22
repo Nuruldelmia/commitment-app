@@ -976,7 +976,8 @@ function renderWeight(){
     html+=`<div class="weight-history">`+entries.slice(0,20).map((e,i)=>{
       const prev=entries[i+1];
       const diff=prev?e.kg-prev.kg:0;
-      const diffStr=diff!==0?`<span style="color:${diff>0?'var(--red)':'var(--green)';font-size:11px">${diff>0?'+':''}${diff.toFixed(1)}</span>`:'';
+      const diffColor=diff>0?'var(--red)':'var(--green)';
+      const diffStr=diff!==0?`<span style="color:${diffColor};font-size:11px">${diff>0?'+':''}${diff.toFixed(1)}</span>`:'';  
       return`<div class="weight-row">
         <div style="flex:1">
           <div style="font-size:14px;font-weight:600;color:var(--text)">${e.kg} kg ${diffStr}</div>
@@ -1213,7 +1214,7 @@ function renderDashboard(){
   const totalSaved=D.savings.reduce((s,g)=>s+parseFloat(g.saved||0),0);
   const latestWeight=D.weight.sort((a,b)=>b.date.localeCompare(a.date))[0];
   const hour=new Date().getHours();
-  const greeting=hour<12?'Good morning':'hour<17?Good afternoon':'Good evening';
+  const greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
   const name=userInfo?`, ${userInfo.name}`:'';
 
   let alertCount=0;
