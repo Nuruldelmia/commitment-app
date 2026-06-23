@@ -240,9 +240,16 @@ table.rpt tr:last-child td{border-bottom:none}
     <div class="step"><div class="snum">1</div><div class="stxt">Go to <b>script.google.com</b> → New Project → paste <b>Code.gs</b> → Save</div></div>
     <div class="step"><div class="snum">2</div><div class="stxt">Click <b>Deploy → New Deployment → Web App</b>. Execute as: <b>Me</b>. Who has access: <b>Anyone</b>. Deploy → Authorise</div></div>
     <div class="step"><div class="snum">3</div><div class="stxt">Copy the <b>Web App URL</b> (ends with /exec) and paste below</div></div>
+    <div class="fld">
+      <label>Apps Script Web App URL</label>
+      <input type="url" id="surl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off"/>
+    </div>
+    <div class="fld">
+      <label>Secret Key <span class="olbl">kept only in this browser, not GitHub</span></label>
+      <input type="password" id="ssecret" placeholder="Paste your long secret key" autocomplete="current-password"/>
+    </div>
     <div class="uwrap">
-      <input type="url" id="surl" placeholder="https://script.google.com/macros/s/.../exec"/>
-      <button class="btn bp" onclick="connectScript()"><i class="ti ti-plug" style="font-size:13px"></i>Connect</button>
+      <button class="btn bp" style="width:100%;justify-content:center" onclick="connectScript()"><i class="ti ti-plug" style="font-size:13px"></i>Connect Securely</button>
     </div>
     <div id="cerr" style="font-size:11px;color:var(--r);margin-top:.4rem;display:none"></div>
   </div>
@@ -377,8 +384,8 @@ const mk=(y,m)=>`${y}-${String(m+1).padStart(2,'0')}`;
 const dl=d=>{if(!d)return null;return Math.ceil((new Date(d)-new Date(tdy()))/86400000)};
 
 const SK='lifehubScriptUrl';
-const SEC='MiaaDelmia0508';
-let nid=200,cM='',exp={},sUrl='',svT=null;
+const SSK='lifehubSecret';
+let nid=200,cM='',exp={},sUrl='',SEC='',svT=null;
 let tv='list',cp='dashboard';
 let ry=nY(),rm=nM();
 let cy=nY(),cm2=nM(),cs=tdy();
@@ -419,8 +426,29 @@ function setSS(state,msg){
   el.querySelector('i').style.fontSize='12px';
 }
 
+function cleanUrl(url){
+  return (url||'').trim().replace(/\/+$/,'');
+}
+function cfgOK(){
+  return !!(sUrl&&SEC);
+}
+async function apiRead(){
+  if(!cfgOK())throw new Error('Missing Apps Script URL or secret key.');
+  const res=await fetch(sUrl+'?action=read&secret='+encodeURIComponent(SEC),{cache:'no-store'});
+  return await res.json();
+}
+async function apiWrite(data){
+  if(!cfgOK())throw new Error('Missing Apps Script URL or secret key.');
+  const res=await fetch(sUrl,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({action:'write',secret:SEC,data})
+  });
+  return await res.json();
+}
+
 async function loadFromSheet(){
-  if(!sUrl){showSetup();return;}
+  if(!cfgOK()){showSetup();return;}
   // INSTANT LOAD: show cached data immediately, sync in background
   const cached=localStorage.getItem('lifehubCache');
   if(cached){
@@ -432,8 +460,7 @@ async function loadFromSheet(){
     // First time - must wait for sheet
     setSS('syncing','Loading...');
     try{
-      const res=await fetch(sUrl+'?action=read&secret='+SEC);
-      const j=await res.json();
+      const j=await apiRead();
       if(j.ok&&j.data){D=mrgD(j.data);nid=maxId()+1;setSS('synced','Synced');showApp();renderAll();}
       else {setSS('error','Load failed');showSetup();}
     }catch(e){setSS('offline','No connection');showSetup();}
@@ -442,8 +469,7 @@ async function loadFromSheet(){
 
 async function syncInBackground(){
   try{
-    const res=await fetch(sUrl+'?action=read&secret='+SEC);
-    const j=await res.json();
+    const j=await apiRead();
     if(j.ok&&j.data){
       D=mrgD(j.data);nid=maxId()+1;
       localStorage.setItem('lifehubCache',JSON.stringify(D));
@@ -471,30 +497,39 @@ async function saveToSheet(){
   if(!sUrl)return;
   localStorage.setItem('lifehubCache',JSON.stringify(D));setSS('syncing','Saving...');
   try{
-    const res=await fetch(sUrl,{method:'POST',body:JSON.stringify({action:'write',secret:SEC,data:D})});
-    const j=await res.json();
+    const j=await apiWrite(D);
     if(j.ok)setSS('synced',new Date().toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit'}));
     else setSS('error','Save failed');
   }catch(e){setSS('offline','Saved offline');}
 }
 function sched(){localStorage.setItem('lifehubCache',JSON.stringify(D));if(svT)clearTimeout(svT);svT=setTimeout(saveToSheet,1500);}
 function syncNow(){closeDr();loadFromSheet();}
-function disconnectApp(){if(!confirm('Disconnect?'))return;localStorage.removeItem(SK);location.reload();}
+function disconnectApp(){if(!confirm('Disconnect and clear local cache on this browser?'))return;localStorage.removeItem(SK);localStorage.removeItem(SSK);localStorage.removeItem('lifehubCache');location.reload();}
 
 async function connectScript(){
-  const url=(document.getElementById('surl').value||''). trim();
+  const url=cleanUrl(document.getElementById('surl').value);
+  const secret=(document.getElementById('ssecret').value||'').trim();
   const e=document.getElementById('cerr');e.style.display='none';
-  if(!url||!url.includes('script.google.com')){e.textContent='Please paste a valid URL.';e.style.display='block';return;}
-  e.textContent='Testing...';e.style.display='block';e.style.color='var(--tx2)';
+  if(!url||!url.includes('script.google.com')||!(url.endsWith('/exec')||url.endsWith('/dev'))){
+    e.textContent='Please paste a valid Apps Script Web App URL ending with /exec.';e.style.display='block';return;
+  }
+  if(!secret||secret.length<20){
+    e.textContent='Secret key should be at least 20 characters. Use a long random key, not your name/date.';e.style.display='block';return;
+  }
+  e.textContent='Testing secure connection...';e.style.display='block';e.style.color='var(--tx2)';
   try{
-    const res=await fetch(url+'?action=read&secret='+SEC);
-    const j=await res.json();
-    if(j.ok){sUrl=url;localStorage.setItem(SK,url);D=mrgD(j.data);nid=maxId()+1;setSS('synced','Connected');e.style.display='none';showApp();renderAll();}
-    else{e.textContent='Connected but error. Check Apps Script code.';e.style.color='var(--r)';}
-  }catch(err){e.textContent='Cannot reach URL. Make sure deployed as Web App with Anyone access.';e.style.color='var(--r)';}
+    sUrl=url;SEC=secret;
+    const j=await apiRead();
+    if(j.ok){
+      localStorage.setItem(SK,url);
+      localStorage.setItem(SSK,secret);
+      D=mrgD(j.data||{});nid=maxId()+1;setSS('synced','Connected');e.style.display='none';showApp();renderAll();
+    }
+    else{e.textContent='Unauthorized or Apps Script error. Check your secret key and Code.gs.';e.style.color='var(--r)';}
+  }catch(err){e.textContent='Cannot reach URL. Make sure deployed as Web App with Anyone access, and secret matches Script Properties.';e.style.color='var(--r)';}
 }
 
-function showSetup(){document.getElementById('sscreen').classList.add('show');document.getElementById('mapp').style.display='none';document.getElementById('bnav').style.display='none';document.getElementById('fab').style.display='none';}
+function showSetup(){document.getElementById('sscreen').classList.add('show');document.getElementById('mapp').style.display='none';document.getElementById('bnav').style.display='none';document.getElementById('fab').style.display='none';const u=document.getElementById('surl');if(u&&!u.value)u.value=sUrl||localStorage.getItem(SK)||'';}
 function showApp(){document.getElementById('sscreen').classList.remove('show');document.getElementById('mapp').style.display='block';document.getElementById('bnav').style.display='flex';document.getElementById('fab').style.display='flex';}
 
 // ── DRAWER ─────────────────────────────────
@@ -1216,7 +1251,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM();});
 // Pre-cache icon font for faster load
 const link=document.createElement('link');link.rel='preload';link.as='style';link.href='https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css';document.head.appendChild(link);
 
-sUrl=localStorage.getItem(SK)||'';
+sUrl=cleanUrl(localStorage.getItem(SK)||'');
+SEC=localStorage.getItem(SSK)||'';
 loadFromSheet();
 
 const mf={name:'LifeHub',short_name:'LifeHub',start_url:location.href,display:'standalone',background_color:'#ffffff',theme_color:'#6C63FF',icons:[{src:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%236C63FF"/><text y=".9em" font-size="68" x="14">📋</text></svg>',sizes:'any',type:'image/svg+xml'}]};
