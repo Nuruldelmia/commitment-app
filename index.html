@@ -435,7 +435,7 @@ async function loadFromSheet(){
       const res=await fetch(sUrl+'?action=read&secret='+SEC);
       const j=await res.json();
       if(j.ok&&j.data){D=mrgD(j.data);nid=maxId()+1;setSS('synced','Synced');showApp();renderAll();}
-      else setSS('error','Load failed');
+      else {setSS('error','Load failed');showSetup();}
     }catch(e){setSS('offline','No connection');showSetup();}
   }
 }
@@ -1216,7 +1216,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM();});
 // Pre-cache icon font for faster load
 const link=document.createElement('link');link.rel='preload';link.as='style';link.href='https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css';document.head.appendChild(link);
 
-sUrl=localStorage.getItem(SK)||'https://script.google.com/macros/s/AKfycbwA32o8qd6_8J_5iv6H-_cpxMdAmdjrgC9mwnKYNEwaZKpPLATbd8IK2CZbkdRFup3l/exec';
+sUrl=localStorage.getItem(SK)||'';
 loadFromSheet();
 
 const mf={name:'LifeHub',short_name:'LifeHub',start_url:location.href,display:'standalone',background_color:'#ffffff',theme_color:'#6C63FF',icons:[{src:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="%236C63FF"/><text y=".9em" font-size="68" x="14">📋</text></svg>',sizes:'any',type:'image/svg+xml'}]};
