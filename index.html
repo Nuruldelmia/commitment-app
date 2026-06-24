@@ -310,6 +310,13 @@ table.rpt tr:last-child td{border-bottom:none}
   </div>
 </div>
 <div id="p-debt" class="panel">
+  <div style="display:flex;gap:5px;margin-bottom:.5rem;flex-wrap:wrap;align-items:center">
+    <span style="font-size:9px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em">Sort by:</span>
+    <button class="btn bsm" id="ds-orig-asc" onclick="setDS('orig-asc')">Original ↑</button>
+    <button class="btn bsm" id="ds-orig-desc" onclick="setDS('orig-desc')">Original ↓</button>
+    <button class="btn bsm" id="ds-rem-asc" onclick="setDS('rem-asc')" style="background:var(--p);color:#fff;border-color:var(--p)">Remaining ↑</button>
+    <button class="btn bsm" id="ds-rem-desc" onclick="setDS('rem-desc')">Remaining ↓</button>
+  </div>
   <div id="ad"></div>
   <div class="mets" id="md"></div>
   <div id="ld"></div>
@@ -385,7 +392,7 @@ const dl=d=>{if(!d)return null;return Math.ceil((new Date(d)-new Date(tdy()))/86
 
 const SK='lifehubScriptUrl';
 const SSK='lifehubSecret';
-let nid=200,cM='',exp={},sUrl='',SEC='',svT=null;
+let nid=200,cM='',exp={},sUrl='',SEC='',svT=null,debtSort='rem-asc';
 let tv='list',cp='dashboard';
 let ry=nY(),rm=nM();
 let cy=nY(),cm2=nM(),cs=tdy();
@@ -657,6 +664,18 @@ const dR=d=>Math.max(0,d.originalAmount-dP(d));
 const dSett=d=>dR(d)===0;
 const dPct=d=>Math.min(100,Math.round(dP(d)/d.originalAmount*100));
 
+function setDS(val){
+  debtSort=val;
+  ['orig-asc','orig-desc','rem-asc','rem-desc'].forEach(s=>{
+    const b=document.getElementById('ds-'+s);
+    if(!b)return;
+    b.style.background=s===val?'var(--p)':'';
+    b.style.color=s===val?'#fff':'';
+    b.style.borderColor=s===val?'var(--p)':'';
+  });
+  renderDebt();
+}
+
 function renderDebt(){
   const tO=D.debts.reduce((s,d)=>s+d.originalAmount,0);
   const tP=D.debts.reduce((s,d)=>s+dP(d),0);
@@ -668,7 +687,14 @@ function renderDebt(){
     <div class="met"><div class="ml">Settled</div><div class="mv p">${D.debts.filter(d=>dSett(d)).length}/${D.debts.length}</div></div>`;
   const el=document.getElementById('ld');
   if(!D.debts.length){el.innerHTML='<div class="empty"><i class="ti ti-credit-card"></i>No debts yet.<br>Tap ＋ to add.</div>';renderAlerts();return;}
-  el.innerHTML=D.debts.map(dCard).join('');renderAlerts();
+  const sorted=[...D.debts].sort((a,b)=>{
+    if(debtSort==='orig-asc')return a.originalAmount-b.originalAmount;
+    if(debtSort==='orig-desc')return b.originalAmount-a.originalAmount;
+    if(debtSort==='rem-asc')return dR(a)-dR(b);
+    if(debtSort==='rem-desc')return dR(b)-dR(a);
+    return 0;
+  });
+  el.innerHTML=sorted.map(dCard).join('');renderAlerts();
 }
 function dCard(d){
   const rem=dR(d),pt=dP(d),p=dPct(d),st=dSett(d);
