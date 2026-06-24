@@ -310,13 +310,6 @@ table.rpt tr:last-child td{border-bottom:none}
   </div>
 </div>
 <div id="p-debt" class="panel">
-  <div style="display:flex;gap:5px;margin-bottom:.5rem;flex-wrap:wrap;align-items:center">
-    <span style="font-size:9px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.04em">Sort by:</span>
-    <button class="btn bsm" id="ds-orig-asc" onclick="setDS('orig-asc')">Original ↑</button>
-    <button class="btn bsm" id="ds-orig-desc" onclick="setDS('orig-desc')">Original ↓</button>
-    <button class="btn bsm" id="ds-rem-asc" onclick="setDS('rem-asc')" style="background:var(--p);color:#fff;border-color:var(--p)">Remaining ↑</button>
-    <button class="btn bsm" id="ds-rem-desc" onclick="setDS('rem-desc')">Remaining ↓</button>
-  </div>
   <div id="ad"></div>
   <div class="mets" id="md"></div>
   <div id="ld"></div>
@@ -392,7 +385,7 @@ const dl=d=>{if(!d)return null;return Math.ceil((new Date(d)-new Date(tdy()))/86
 
 const SK='lifehubScriptUrl';
 const SSK='lifehubSecret';
-let nid=200,cM='',exp={},sUrl='',SEC='',svT=null,debtSort='rem-asc';
+let nid=200,cM='',exp={},sUrl='',SEC='',svT=null;
 let tv='list',cp='dashboard';
 let ry=nY(),rm=nM();
 let cy=nY(),cm2=nM(),cs=tdy();
@@ -664,18 +657,6 @@ const dR=d=>Math.max(0,d.originalAmount-dP(d));
 const dSett=d=>dR(d)===0;
 const dPct=d=>Math.min(100,Math.round(dP(d)/d.originalAmount*100));
 
-function setDS(val){
-  debtSort=val;
-  ['orig-asc','orig-desc','rem-asc','rem-desc'].forEach(s=>{
-    const b=document.getElementById('ds-'+s);
-    if(!b)return;
-    b.style.background=s===val?'var(--p)':'';
-    b.style.color=s===val?'#fff':'';
-    b.style.borderColor=s===val?'var(--p)':'';
-  });
-  renderDebt();
-}
-
 function renderDebt(){
   const tO=D.debts.reduce((s,d)=>s+d.originalAmount,0);
   const tP=D.debts.reduce((s,d)=>s+dP(d),0);
@@ -687,14 +668,7 @@ function renderDebt(){
     <div class="met"><div class="ml">Settled</div><div class="mv p">${D.debts.filter(d=>dSett(d)).length}/${D.debts.length}</div></div>`;
   const el=document.getElementById('ld');
   if(!D.debts.length){el.innerHTML='<div class="empty"><i class="ti ti-credit-card"></i>No debts yet.<br>Tap ＋ to add.</div>';renderAlerts();return;}
-  const sorted=[...D.debts].sort((a,b)=>{
-    if(debtSort==='orig-asc')return a.originalAmount-b.originalAmount;
-    if(debtSort==='orig-desc')return b.originalAmount-a.originalAmount;
-    if(debtSort==='rem-asc')return dR(a)-dR(b);
-    if(debtSort==='rem-desc')return dR(b)-dR(a);
-    return 0;
-  });
-  el.innerHTML=sorted.map(dCard).join('');renderAlerts();
+  el.innerHTML=D.debts.map(dCard).join('');renderAlerts();
 }
 function dCard(d){
   const rem=dR(d),pt=dP(d),p=dPct(d),st=dSett(d);
@@ -1050,13 +1024,24 @@ function renderReport(){
   <div class="card">
     <div class="card-t" style="margin-bottom:.625rem"><i class="ti ti-credit-card" style="font-size:14px"></i>Debt Overview</div>
     <div style="overflow-x:auto"><table class="rpt">
-      <thead><tr><th style="width:22%">Name</th><th style="width:16%">Original</th><th style="width:16%">Paid</th><th style="width:16%">Remaining</th><th style="width:10%">%</th><th style="width:20%">Pay to</th></tr></thead>
-      <tbody>${D.debts.length?D.debts.map(d=>{const p=dPct(d),s=dSett(d);return`<tr><td>${d.name}</td><td>${R(d.originalAmount)}</td><td style="color:var(--g)">${R(dP(d))}</td><td style="color:${s?'var(--g)':'var(--r)'}">${R(dR(d))}</td><td><span class="chip ${s?'cg':p>50?'co':'cr'}">${p}%</span></td><td style="white-space:normal">${d.where||'—'}</td></tr>`;}).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:.875rem">No debts</td></tr>'}</tbody>
+      <thead><tr><th style="width:20%">Name</th><th style="width:14%">Original</th><th style="width:14%">Paid</th><th style="width:14%">Remaining</th><th style="width:16%">Mths Left</th><th style="width:8%">%</th><th style="width:14%">Pay to</th></tr></thead>
+      <tbody>${D.debts.length?D.debts.map(d=>{const p=dPct(d),s=dSett(d);return`<tr><td>${d.name}</td><td>${R(d.originalAmount)}</td><td style="color:var(--g)">${R(dP(d))}</td><td style="color:${s?'var(--g)':'var(--r)'}">${R(dR(d))}</td><td>${mthsLabel(d)}</td><td><span class="chip ${s?'cg':p>50?'co':'cr'}">${p}%</span></td><td style="white-space:normal">${d.where||'—'}</td></tr>`;}).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:.875rem">No debts</td></tr>'}</tbody>
     </table></div>
     <div class="rtot" style="color:var(--r)"><span>Total remaining</span><span>${R(totR)}</span></div>
   </div>`;
 }
 function chRM(dir){rm+=dir;if(rm>11){rm=0;ry++;}if(rm<0){rm=11;ry--;}renderReport();}
+
+function remMonths(d){
+  // Count unpaid payments
+  const unpaid=d.payments.filter(p=>!p.paid).length;
+  return unpaid;
+}
+function mthsLabel(d){
+  const r=remMonths(d);
+  if(r<=0)return'Settled';
+  return r+' month'+(r===1?'':'s')+' left';
+}
 
 function bldTxt(){
   const rk=mk(ry,rm);const mn=`${MS[rm]} ${ry}`;
@@ -1067,7 +1052,7 @@ function bldTxt(){
   let t=`📋 *LIFEHUB REPORT — ${mn}*\n\n💰 *SUMMARY*\nTotal: ${R(totC)}\nPaid: ${R(paidC)}\nBalance: ${R(totC-paidC)}\nDebt: ${R(totR)}\n\n📌 *COMMITMENTS*\n`;
   if(items.length)items.forEach(c=>{t+=`${c.paid?'✅':'⏳'} ${c.name} — ${R(c.amount)}\n`;});else t+='None\n';
   t+=`\n💳 *DEBTS*\n`;
-  if(D.debts.length)D.debts.forEach(d=>{t+=`${dSett(d)?'✅':'🔴'} ${d.name} — ${R(dR(d))} left\n`;});else t+='None\n';
+  if(D.debts.length)D.debts.forEach(d=>{t+=`${dSett(d)?'✅':'🔴'} ${d.name} — ${R(dR(d))} left · ${mthsLabel(d)}\n`;});else t+='None\n';
   t+=`\n_LifeHub · ${new Date().toLocaleDateString('en-MY')}_`;
   return t;
 }
@@ -1076,8 +1061,8 @@ function expCSV(){
   const rk=mk(ry,rm);const mn=`${MS[rm]}-${ry}`;
   let csv='COMMITMENTS\nName,Category,Amount,Due,Status\n';
   D.commitments.filter(c=>c.monthKey===rk).forEach(c=>{csv+=`"${c.name}","${c.cat}","${c.amount}","${c.due||''}", "${c.paid?'Paid':'Pending'}"\n`;});
-  csv+='\nDEBTS\nName,Category,Original,Paid,Remaining,Pay To\n';
-  D.debts.forEach(d=>{csv+=`"${d.name}","${d.cat}","${d.originalAmount}","${dP(d)}","${dR(d)}","${d.where||''}"\n`;});
+  csv+='\nDEBTS\nName,Category,Original,Paid,Remaining,Remaining Months,Pay To\n';
+  D.debts.forEach(d=>{csv+=`"${d.name}","${d.cat}","${d.originalAmount}","${dP(d)}","${dR(d)}","${mthsLabel(d)}","${d.where||''}"\n`;});
   const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`LifeHub-${mn}.csv`;a.click();URL.revokeObjectURL(url);
 }
@@ -1104,8 +1089,8 @@ function expPDF(){
   <tbody>${items.length?items.map(c=>`<tr><td>${c.name}</td><td>${c.cat}</td><td>${R(c.amount)}</td><td>${c.due?fD(c.due):'—'}</td><td><span class="b ${c.paid?'gn2':'pe'}">${c.paid?'Paid':'Pending'}</span></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:#aaa">No commitments</td></tr>'}</tbody></table>
   <div class="tot"><span>Total</span><span>${R(totC)}</span></div>
   <h2>Debts</h2>
-  <table><thead><tr><th>Name</th><th>Original</th><th>Paid</th><th>Remaining</th><th>%</th><th>Pay to</th></tr></thead>
-  <tbody>${D.debts.length?D.debts.map(d=>{const p=dPct(d),s=dSett(d);return`<tr><td>${d.name}</td><td>${R(d.originalAmount)}</td><td style="color:#1D9E75">${R(dP(d))}</td><td style="color:${s?'#1D9E75':'#E24B4A'}">${R(dR(d))}</td><td><span class="b ${s?'gn2':'pe'}">${p}%</span></td><td>${d.where||'—'}</td></tr>`;}).join(''):'<tr><td colspan="6" style="text-align:center;color:#aaa">No debts</td></tr>'}</tbody></table>
+  <table><thead><tr><th>Name</th><th>Original</th><th>Paid</th><th>Remaining</th><th>Months Left</th><th>%</th><th>Pay to</th></tr></thead>
+  <tbody>${D.debts.length?D.debts.map(d=>{const p=dPct(d),s=dSett(d);return`<tr><td>${d.name}</td><td>${R(d.originalAmount)}</td><td style="color:#1D9E75">${R(dP(d))}</td><td style="color:${s?'#1D9E75':'#E24B4A'}">${R(dR(d))}</td><td>${mthsLabel(d)}</td><td><span class="b ${s?'gn2':'pe'}">${p}%</span></td><td>${d.where||'—'}</td></tr>`;}).join(''):'<tr><td colspan="6" style="text-align:center;color:#aaa">No debts</td></tr>'}</tbody></table>
   <div class="tot" style="color:#E24B4A"><span>Total Remaining</span><span>${R(totR)}</span></div>
   <div class="ft">LifeHub · ${new Date().toLocaleString('en-MY')}</div>
   <script>window.onload=()=>window.print()<\/script></body></html>`;
