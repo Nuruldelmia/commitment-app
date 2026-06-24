@@ -784,6 +784,10 @@ function editDebt(id){
     <div class="half">
       <div class="fld"><label>Pay to</label><input type="text" id="fw" value="${d.where||''}" autocomplete="off"/></div>
       <div class="fld"><label>Type</label><select id="fwt"><option${(d.wheretype||'Bank')==='Bank'?' selected':''}>Bank</option><option${d.wheretype==='Person'?' selected':''}>Person</option></select></div>
+    </div>
+    <div class="fld" style="background:var(--pbg);border-radius:var(--rad);padding:.625rem;border:1.5px solid var(--p)">
+      <label style="color:var(--p)">Add payment months <span class="olbl" style="color:var(--tx2)">optional — adds to end of checklist</span></label>
+      <input type="number" id="faddm" placeholder="e.g. 3" min="0" max="60" inputmode="numeric" style="margin-top:4px"/>
     </div>`;
   document.getElementById('mbtns').style.display='flex';
   document.getElementById('mwrap').classList.add('show');
@@ -808,6 +812,15 @@ function saveEditDebt(){
   d.remindDays=gv('fr')?parseInt(gv('fr')):null;
   d.where=gv('fw');
   d.wheretype=gv('fwt');
+  const addMths=parseInt(gv('faddm'))||0;
+  if(addMths>0){
+    const lp=d.payments.length?d.payments[d.payments.length-1]:null;
+    let sd=lp?(()=>{const pts=lp.month.split(' ');return new Date(parseInt(pts[1]),MS.indexOf(pts[0])+1,1);})():new Date();
+    for(let i=0;i<addMths;i++){
+      d.payments.push({id:++nid,month:`${MS[sd.getMonth()]} ${sd.getFullYear()}`,amount:d.monthlyAmount,paid:false});
+      sd=new Date(sd.getFullYear(),sd.getMonth()+1,1);
+    }
+  }
   sched();closeM();renderDebt();renderDashboard();
 }
 
@@ -1108,7 +1121,7 @@ function renderReport(){
   <div class="card">
     <div class="card-t" style="margin-bottom:.625rem"><i class="ti ti-credit-card" style="font-size:14px"></i>Debt Overview</div>
     <div style="overflow-x:auto"><table class="rpt">
-      <thead><tr><th style="width:18%">Name</th><th style="width:13%">Original</th><th style="width:13%">Paid</th><th style="width:13%">Remaining</th><th style="width:16%">Mths Left</th><th style="width:9%">%</th><th style="width:18%">Pay to</th></tr></thead>
+      <thead><tr><th style="width:16%">Name</th><th style="width:12%">Original</th><th style="width:12%">Paid</th><th style="width:12%">Remaining</th><th style="width:13%">Mths Left</th><th style="width:9%">Rate</th><th style="width:8%">Paid%</th><th style="width:18%">Pay to</th></tr></thead>
       <tbody>${D.debts.length?D.debts.map(d=>{const p=dPct(d),s=dSett(d);return`<tr><td>${d.name}</td><td>${R(d.originalAmount)}</td><td style="color:var(--g)">${R(dP(d))}</td><td style="color:${s?'var(--g)':'var(--r)'}">${R(dR(d))}</td><td>${mthsLabel(d)}</td><td><span class="chip ${s?'cg':p>50?'co':'cr'}">${p}%</span></td><td style="white-space:normal">${d.where||'—'}</td></tr>`;}).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:.875rem">No debts</td></tr>'}</tbody>
     </table></div>
     <div class="rtot" style="color:var(--r)"><span>Total remaining</span><span>${R(totR)}</span></div>
@@ -1128,7 +1141,7 @@ function bldTxt(){
   let t=`📋 *LIFEHUB REPORT — ${mn}*\n\n💰 *SUMMARY*\nTotal: ${R(totC)}\nPaid: ${R(paidC)}\nBalance: ${R(totC-paidC)}\nDebt: ${R(totR)}\n\n📌 *COMMITMENTS*\n`;
   if(items.length)items.forEach(c=>{t+=`${c.paid?'✅':'⏳'} ${c.name} — ${R(c.amount)}\n`;});else t+='None\n';
   t+=`\n💳 *DEBTS*\n`;
-  if(D.debts.length)D.debts.forEach(d=>{t+=`${dSett(d)?'✅':'🔴'} ${d.name} — ${R(dR(d))} left · ${mthsLabel(d)}\n`;});else t+='None\n';
+  if(D.debts.length)D.debts.forEach(d=>{t+=`${dSett(d)?'✅':'🔴'} ${d.name} — ${R(dR(d))} left · ${mthsLabel(d)}${d.interest?' · '+d.rate+'% p.a.':''}\n`;});else t+='None\n';
   t+=`\n_LifeHub · ${new Date().toLocaleDateString('en-MY')}_`;
   return t;
 }
@@ -1137,8 +1150,8 @@ function expCSV(){
   const rk=mk(ry,rm);const mn=`${MS[rm]}-${ry}`;
   let csv='COMMITMENTS\nName,Category,Amount,Due,Status\n';
   D.commitments.filter(c=>c.monthKey===rk).forEach(c=>{csv+=`"${c.name}","${c.cat}","${c.amount}","${c.due||''}", "${c.paid?'Paid':'Pending'}"\n`;});
-  csv+='\nDEBTS\nName,Category,Original,Paid,Remaining,Remaining Months,Pay To\n';
-  D.debts.forEach(d=>{csv+=`"${d.name}","${d.cat}","${d.originalAmount}","${dP(d)}","${dR(d)}","${mthsLabel(d)}","${d.where||''}"\n`;});
+  csv+='\nDEBTS\nName,Category,Original,Paid,Remaining,Remaining Months,Interest Rate,Pay To\n';
+  D.debts.forEach(d=>{csv+=`"${d.name}","${d.cat}","${d.originalAmount}","${dP(d)}","${dR(d)}","${mthsLabel(d)}","${d.interest?d.rate+'% p.a.':'—'}","${d.where||''}"\n`;});
   const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`LifeHub-${mn}.csv`;a.click();URL.revokeObjectURL(url);
 }
@@ -1165,7 +1178,7 @@ function expPDF(){
   <tbody>${items.length?items.map(c=>`<tr><td>${c.name}</td><td>${c.cat}</td><td>${R(c.amount)}</td><td>${c.due?fD(c.due):'—'}</td><td><span class="b ${c.paid?'gn2':'pe'}">${c.paid?'Paid':'Pending'}</span></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:#aaa">No commitments</td></tr>'}</tbody></table>
   <div class="tot"><span>Total</span><span>${R(totC)}</span></div>
   <h2>Debts</h2>
-  <table><thead><tr><th>Name</th><th>Original</th><th>Paid</th><th>Remaining</th><th>Mths Left</th><th>%</th><th>Pay to</th></tr></thead>
+  <table><thead><tr><th>Name</th><th>Original</th><th>Paid</th><th>Remaining</th><th>Mths Left</th><th>Rate</th><th>Paid%</th><th>Pay to</th></tr></thead>
   <tbody>${D.debts.length?D.debts.map(d=>{const p=dPct(d),s=dSett(d);return`<tr><td>${d.name}</td><td>${R(d.originalAmount)}</td><td style="color:#1D9E75">${R(dP(d))}</td><td style="color:${s?'#1D9E75':'#E24B4A'}">${R(dR(d))}</td><td>${mthsLabel(d)}</td><td><span class="b ${s?'gn2':'pe'}">${p}%</span></td><td>${d.where||'—'}</td></tr>`;}).join(''):'<tr><td colspan="6" style="text-align:center;color:#aaa">No debts</td></tr>'}</tbody></table>
   <div class="tot" style="color:#E24B4A"><span>Total Remaining</span><span>${R(totR)}</span></div>
   <div class="ft">LifeHub · ${new Date().toLocaleString('en-MY')}</div>
