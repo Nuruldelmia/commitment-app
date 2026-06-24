@@ -697,6 +697,7 @@ function dCard(d){
           <div style="font-size:13px;font-weight:700;color:var(--tx);display:flex;align-items:center;gap:4px;flex-wrap:wrap">
             ${d.name}<span class="chip ${chip(d.cat)}">${d.cat}</span><span class="chip ${d.payType==='Lump sum'?'cr':'cp'}">${d.payType}</span>${st?'<span class="stlb"><i class="ti ti-circle-check" style="font-size:11px"></i>Settled</span>':''}</div>
           ${meta.length?`<div style="font-size:10px;color:var(--tx2);margin-top:3px;display:flex;flex-wrap:wrap;gap:5px">${meta.map(m=>`<span>${m}</span>`).join('')}</div>`:''}</div>
+        <button class="btn bsm" style="padding:3px 8px;font-size:11px" onclick="editDebt(${d.id})"><i class="ti ti-pencil" style="font-size:12px"></i></button>
         <button class="del" onclick="delDebt(${d.id})"><i class="ti ti-trash"></i></button>
       </div>
       <div class="damts">
@@ -727,6 +728,63 @@ function tAcc(id){exp[id]=!exp[id];renderDebt();}
 function tPay(dId,pId){const d=D.debts.find(x=>x.id===dId);if(!d)return;const p=d.payments.find(x=>x.id===pId);if(p){p.paid=!p.paid;sched();renderDebt();renderDashboard();}}
 function addPay(dId){const d=D.debts.find(x=>x.id===dId);if(!d)return;const month=document.getElementById('s-'+dId).value;const amount=parseFloat(document.getElementById('a-'+dId).value)||d.monthlyAmount;d.payments.push({id:++nid,month,amount,paid:false});sched();renderDebt();}
 function delPay(dId,pId){const d=D.debts.find(x=>x.id===dId);if(d){d.payments=d.payments.filter(x=>x.id!==pId);sched();renderDebt();}}
+function editDebt(id){
+  const d=D.debts.find(x=>x.id===id);if(!d)return;
+  cM='debt-edit';
+  const now=new Date();const mO=[];
+  for(let i=0;i<24;i++){const d2=new Date(now.getFullYear(),now.getMonth()+i,1);mO.push(`<option>${MS[d2.getMonth()]} ${d2.getFullYear()}</option>`);}
+  document.getElementById('mtitle').textContent='Edit Debt';
+  document.getElementById('mbody').innerHTML=`
+    <div class="hint"><i class="ti ti-info-circle" style="font-size:12px;flex-shrink:0"></i>Update debt details. Payment checklist is not affected.</div>
+    <input type="hidden" id="fed" value="${d.id}"/>
+    <div class="fld"><label>Name</label><input type="text" id="fn" value="${d.name}" autocomplete="off"/></div>
+    <div class="fld"><label>Category</label><select id="fc">${DC.map(c=>`<option${c===d.cat?' selected':''}>${c}</option>`).join('')}</select></div>
+    <div class="half">
+      <div class="fld"><label>Total owed (RM)</label><input type="number" id="ft" value="${d.originalAmount}" min="0" step="0.01" inputmode="decimal"/></div>
+      <div class="fld"><label>Monthly payment (RM)</label><input type="number" id="fm" value="${d.monthlyAmount}" min="0" step="0.01" inputmode="decimal"/></div>
+    </div>
+    <div class="half">
+      <div class="fld"><label>Payment type</label><select id="fpt"><option${d.payType==='Installment'?' selected':''}>Installment</option><option${d.payType==='Lump sum'?' selected':''}>Lump sum</option></select></div>
+      <div class="fld"><label>Tenure (months)</label><input type="number" id="fte" value="${d.tenure||''}" min="1" inputmode="numeric"/></div>
+    </div>
+    <div class="half">
+      <div class="fld"><label>Interest?</label><select id="fi"><option value="yes"${d.interest?' selected':''}>Yes</option><option value="no"${!d.interest?' selected':''}>No</option></select></div>
+      <div class="fld"><label>Rate (% p.a.)</label><input type="number" id="frt" value="${d.rate||0}" min="0" step="0.1" inputmode="decimal"/></div>
+    </div>
+    <div class="half">
+      <div class="fld"><label>Due date <span class="olbl">optional</span></label><input type="date" id="fd" value="${d.due||''}"/></div>
+      <div class="fld"><label>Remind before <span class="olbl">optional</span></label><input type="number" id="fr" value="${d.remindDays||''}" placeholder="days" min="1" inputmode="numeric"/></div>
+    </div>
+    <div class="half">
+      <div class="fld"><label>Pay to</label><input type="text" id="fw" value="${d.where||''}" autocomplete="off"/></div>
+      <div class="fld"><label>Type</label><select id="fwt"><option${(d.wheretype||'Bank')==='Bank'?' selected':''}>Bank</option><option${d.wheretype==='Person'?' selected':''}>Person</option></select></div>
+    </div>`;
+  document.getElementById('mbtns').style.display='flex';
+  document.getElementById('mwrap').classList.add('show');
+  setTimeout(()=>{const fn=document.getElementById('fn');if(fn)fn.focus();},80);
+}
+
+function saveEditDebt(){
+  const id=parseInt(document.getElementById('fed').value);
+  const d=D.debts.find(x=>x.id===id);if(!d)return;
+  const gv=i=>{const el=document.getElementById(i);return el?el.value:'';};
+  const gf=i=>{const el=document.getElementById(i);return el?parseFloat(el.value)||0:0;};
+  const name=(gv('fn')||'').trim();if(!name){alert('Please enter a name.');return;}
+  d.name=name;
+  d.cat=gv('fc');
+  d.originalAmount=gf('ft');
+  d.monthlyAmount=gf('fm')||gf('ft');
+  d.payType=gv('fpt');
+  d.tenure=parseInt(gv('fte'))||1;
+  d.interest=gv('fi')==='yes';
+  d.rate=gf('frt');
+  d.due=gv('fd')||'';
+  d.remindDays=gv('fr')?parseInt(gv('fr')):null;
+  d.where=gv('fw');
+  d.wheretype=gv('fwt');
+  sched();closeM();renderDebt();renderDashboard();
+}
+
 function delDebt(id){if(!confirm('Delete this debt?'))return;delete exp[id];D.debts=D.debts.filter(x=>x.id!==id);sched();renderDebt();renderDashboard();}
 
 // ── TASKS ──────────────────────────────────
@@ -1024,7 +1082,7 @@ function renderReport(){
   <div class="card">
     <div class="card-t" style="margin-bottom:.625rem"><i class="ti ti-credit-card" style="font-size:14px"></i>Debt Overview</div>
     <div style="overflow-x:auto"><table class="rpt">
-      <thead><tr><th style="width:20%">Name</th><th style="width:14%">Original</th><th style="width:14%">Paid</th><th style="width:14%">Remaining</th><th style="width:16%">Mths Left</th><th style="width:8%">%</th><th style="width:14%">Pay to</th></tr></thead>
+      <thead><tr><th style="width:18%">Name</th><th style="width:13%">Original</th><th style="width:13%">Paid</th><th style="width:13%">Remaining</th><th style="width:16%">Mths Left</th><th style="width:9%">%</th><th style="width:18%">Pay to</th></tr></thead>
       <tbody>${D.debts.length?D.debts.map(d=>{const p=dPct(d),s=dSett(d);return`<tr><td>${d.name}</td><td>${R(d.originalAmount)}</td><td style="color:var(--g)">${R(dP(d))}</td><td style="color:${s?'var(--g)':'var(--r)'}">${R(dR(d))}</td><td>${mthsLabel(d)}</td><td><span class="chip ${s?'cg':p>50?'co':'cr'}">${p}%</span></td><td style="white-space:normal">${d.where||'—'}</td></tr>`;}).join(''):'<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:.875rem">No debts</td></tr>'}</tbody>
     </table></div>
     <div class="rtot" style="color:var(--r)"><span>Total remaining</span><span>${R(totR)}</span></div>
@@ -1032,16 +1090,8 @@ function renderReport(){
 }
 function chRM(dir){rm+=dir;if(rm>11){rm=0;ry++;}if(rm<0){rm=11;ry--;}renderReport();}
 
-function remMonths(d){
-  // Count unpaid payments
-  const unpaid=d.payments.filter(p=>!p.paid).length;
-  return unpaid;
-}
-function mthsLabel(d){
-  const r=remMonths(d);
-  if(r<=0)return'Settled';
-  return r+' month'+(r===1?'':'s')+' left';
-}
+function remMonths(d){return d.payments.filter(p=>!p.paid).length;}
+function mthsLabel(d){const r=remMonths(d);if(r<=0)return'Settled';return r+' month'+(r===1?'':'s')+' left';}
 
 function bldTxt(){
   const rk=mk(ry,rm);const mn=`${MS[rm]} ${ry}`;
@@ -1089,7 +1139,7 @@ function expPDF(){
   <tbody>${items.length?items.map(c=>`<tr><td>${c.name}</td><td>${c.cat}</td><td>${R(c.amount)}</td><td>${c.due?fD(c.due):'—'}</td><td><span class="b ${c.paid?'gn2':'pe'}">${c.paid?'Paid':'Pending'}</span></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:#aaa">No commitments</td></tr>'}</tbody></table>
   <div class="tot"><span>Total</span><span>${R(totC)}</span></div>
   <h2>Debts</h2>
-  <table><thead><tr><th>Name</th><th>Original</th><th>Paid</th><th>Remaining</th><th>Months Left</th><th>%</th><th>Pay to</th></tr></thead>
+  <table><thead><tr><th>Name</th><th>Original</th><th>Paid</th><th>Remaining</th><th>Mths Left</th><th>%</th><th>Pay to</th></tr></thead>
   <tbody>${D.debts.length?D.debts.map(d=>{const p=dPct(d),s=dSett(d);return`<tr><td>${d.name}</td><td>${R(d.originalAmount)}</td><td style="color:#1D9E75">${R(dP(d))}</td><td style="color:${s?'#1D9E75':'#E24B4A'}">${R(dR(d))}</td><td>${mthsLabel(d)}</td><td><span class="b ${s?'gn2':'pe'}">${p}%</span></td><td>${d.where||'—'}</td></tr>`;}).join(''):'<tr><td colspan="6" style="text-align:center;color:#aaa">No debts</td></tr>'}</tbody></table>
   <div class="tot" style="color:#E24B4A"><span>Total Remaining</span><span>${R(totR)}</span></div>
   <div class="ft">LifeHub · ${new Date().toLocaleString('en-MY')}</div>
@@ -1199,6 +1249,7 @@ function closeM(){document.getElementById('mwrap').classList.remove('show');}
 function closeModalBg(e){if(e.target.id==='mwrap')closeM();}
 
 function saveM(){
+  if(cM==='debt-edit'){saveEditDebt();return;}
   const id=++nid;
   const gv=i=>{const el=document.getElementById(i);return el?el.value:'';};
   const gf=i=>{const el=document.getElementById(i);return el?parseFloat(el.value)||0:0;};
