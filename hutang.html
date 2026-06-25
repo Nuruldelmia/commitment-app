@@ -124,6 +124,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
     <div class="logo-text">LifeHub <span>/ Hutang</span></div>
   </div>
   <span class="badge-view" id="viewBadge"></span>
+  <button id="backBtn" onclick="history.back()" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;padding:5px 12px;cursor:pointer;display:none">← LifeHub</button>
 </div>
 
 <!-- ADMIN VIEW -->
@@ -256,6 +257,7 @@ const viewId=params.get('view');
 const isPublic=!!viewId;
 document.getElementById('viewBadge').textContent=isPublic?'View Hutang':'Admin';
 document.getElementById('viewBadge').classList.add(isPublic?'badge-public':'badge-admin');
+if(!isPublic) document.getElementById('backBtn').style.display='block';
 if(isPublic){document.getElementById('adminView').classList.add('hidden');document.getElementById('publicView').classList.remove('hidden');renderPublicView(viewId)}
 else renderAdminView();
 
