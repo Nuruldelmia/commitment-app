@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hutang Tracker · LifeHub</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0F172A;--surface:#1E293B;--surface2:#273348;--border:#334155;--text:#F1F5F9;--muted:#94A3B8;--jade:#10B981;--jade-dim:#065F46;--amber:#F59E0B;--amber-dim:#78350F;--rose:#F43F5E;--rose-dim:#881337;--blue:#60A5FA;--blue-dim:#1E3A5F;--purple:#A78BFA;--radius:12px;--mono:'JetBrains Mono',monospace}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:14px;line-height:1.6}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--jade)}
+.logo-text{font-weight:700;font-size:15px;letter-spacing:-.3px}
+.logo-text span{color:var(--muted);font-weight:400}
+.badge-view{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;letter-spacing:.5px;text-transform:uppercase}
+.badge-admin{background:var(--jade-dim);color:var(--jade)}
+.badge-public{background:var(--blue-dim);color:var(--blue)}
+.container{max-width:820px;margin:0 auto;padding:28px 16px}
+.hidden{display:none!important}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.page-sub{color:var(--muted);margin-top:4px;font-size:13px;margin-bottom:24px}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:24px}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.summary-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600}
+.summary-value{font-family:var(--mono);font-size:18px;font-weight:500;margin-top:5px}
+.summary-value.jade{color:var(--jade)}.summary-value.amber{color:var(--amber)}.summary-value.rose{color:var(--rose)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.toolbar-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.toolbar-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tabs{display:flex;gap:3px;background:var(--surface);border-radius:var(--radius);padding:3px}
+.tab{padding:6px 12px;border-radius:9px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s;white-space:nowrap}
+.tab.active{background:var(--surface2);color:var(--text)}
+.tab:hover:not(.active){color:var(--text)}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.filter-search{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;padding:6px 12px;outline:none;width:150px}
+.filter-search::placeholder{color:var(--muted)}
+.filter-search:focus{border-color:var(--jade)}
+.filter-select{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;padding:6px 10px;outline:none;cursor:pointer}
+.filter-select:focus{border-color:var(--jade)}
+.btn-report{font-size:12px;font-weight:500;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-report.ws:hover{border-color:#25D366;color:#25D366}
+.btn-report.pdf-btn:hover{border-color:var(--rose);color:var(--rose)}
+.btn-report.csv-btn:hover{border-color:var(--amber);color:var(--amber)}
+.btn-add{background:var(--jade);color:#fff;border:none;border-radius:var(--radius);padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;transition:opacity .15s}
+.btn-add:hover{opacity:.85}
+.card-list{display:flex;flex-direction:column;gap:10px}
+.hutang-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;transition:border-color .15s}
+.hutang-card:hover{border-color:#475569}
+.hutang-card.overdue{border-left:3px solid var(--rose)}
+.hutang-card.settled{border-left:3px solid var(--jade);opacity:.7}
+.hutang-card.pending{border-left:3px solid var(--amber)}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.card-name{font-weight:600;font-size:15px}
+.card-lender{font-size:11px;color:var(--blue);font-weight:600;margin-top:2px;letter-spacing:.3px}
+.card-note{color:var(--muted);font-size:12px;margin-top:2px}
+.card-right{text-align:right;flex-shrink:0}
+.card-amount{font-family:var(--mono);font-size:16px;font-weight:500}
+.card-amount.jade{color:var(--jade)}.card-amount.rose{color:var(--rose)}.card-amount.amber{color:var(--amber)}
+.status-pill{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:2px 8px;border-radius:20px;margin-top:4px}
+.status-settled{background:var(--jade-dim);color:var(--jade)}
+.status-pending{background:var(--amber-dim);color:var(--amber)}
+.status-overdue{background:var(--rose-dim);color:var(--rose)}
+.progress-wrap{margin-top:12px}
+.progress-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
+.progress-bar{height:4px;background:var(--border);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.progress-fill.jade{background:var(--jade)}.progress-fill.amber{background:var(--amber)}.progress-fill.rose{background:var(--rose)}
+.payment-section{margin-top:12px;border-top:1px solid var(--border);padding-top:10px}
+.payment-title{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;margin-bottom:7px}
+.payment-item{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px dashed #1e2d40}
+.payment-item:last-child{border-bottom:none}
+.payment-date{font-size:12px;color:var(--muted)}
+.payment-amt{font-family:var(--mono);font-size:12px;color:var(--jade)}
+.card-actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.btn-sm{font-size:12px;font-weight:500;padding:5px 11px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:4px}
+.btn-sm:hover{border-color:var(--blue);color:var(--blue)}
+.btn-sm.danger:hover{border-color:var(--rose);color:var(--rose)}
+.btn-sm.success:hover{border-color:var(--jade);color:var(--jade)}
+.btn-sm.ws-btn:hover{border-color:#25D366;color:#25D366}
+.share-btn{background:var(--blue-dim);border-color:var(--blue);color:var(--blue)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:18px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 11px;color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus{border-color:var(--jade)}
+.field select option{background:var(--surface)}
+.modal-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
+.btn-primary{background:var(--jade);color:#fff;border:none;border-radius:9px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-cancel{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:9px;padding:8px 18px;font-size:13px;font-weight:500;cursor:pointer}
+.ws-option{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:border-color .15s;margin-bottom:10px}
+.ws-option:hover{border-color:#25D366}
+.ws-option-title{font-weight:600;font-size:13px;margin-bottom:3px}
+.ws-option-sub{font-size:12px;color:var(--muted)}
+.ws-person-list{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto}
+.ws-person-item{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.ws-person-name{font-size:13px;font-weight:500}
+.ws-person-amt{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.btn-ws-send{background:#25D366;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer}
+.section-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin:10px 0 8px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 20px;font-size:13px;font-weight:500;z-index:300;transition:opacity .3s;white-space:nowrap}
+.toast.hidden{opacity:0;pointer-events:none}
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty-icon{font-size:36px;margin-bottom:12px}
+.empty-text{font-size:14px}
+.public-banner{background:linear-gradient(135deg,var(--blue-dim),var(--jade-dim));border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:22px;display:flex;align-items:center;gap:16px}
+.public-avatar{width:52px;height:52px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:var(--blue);flex-shrink:0;border:2px solid var(--blue)}
+.public-name{font-size:19px;font-weight:700}
+.public-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.public-readonly{font-size:11px;color:var(--amber);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+@media print{.topbar,.card-actions,.btn-add,.toolbar-right,.filter-bar{display:none!important}body{background:#fff;color:#000}.hutang-card{border:1px solid #ccc;margin-bottom:12px;page-break-inside:avoid}.summary-card{border:1px solid #ccc}:root{--bg:#fff;--surface:#f9f9f9;--text:#000;--muted:#666;--border:#ddd}}
+@media(max-width:520px){.summary-grid{grid-template-columns:1fr 1fr}.card-top{flex-direction:column}.card-right{text-align:left}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-dot"></div>
+    <div class="logo-text">LifeHub <span>/ Hutang</span></div>
+  </div>
+  <span class="badge-view" id="viewBadge"></span>
+</div>
+
+<!-- ADMIN VIEW -->
+<div class="container" id="adminView">
+  <div class="page-title">Hutang Tracker</div>
+  <div class="page-sub">Track siapa hutang dekat kau & siapa yang kau hutang.</div>
+
+  <div class="summary-grid">
+    <div class="summary-card"><div class="summary-label">Orang Hutang Dekat Saya</div><div class="summary-value jade" id="totalOwedToMe">RM 0.00</div></div>
+    <div class="summary-card"><div class="summary-label">Saya Hutang Orang</div><div class="summary-value rose" id="totalIOwe">RM 0.00</div></div>
+    <div class="summary-card"><div class="summary-label">Net Balance</div><div class="summary-value amber" id="netBalance">RM 0.00</div></div>
+    <div class="summary-card"><div class="summary-label">Rekod Aktif</div><div class="summary-value" id="activeCount" style="color:var(--blue)">0</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('lend')">💸 Orang Hutang Saya</button>
+        <button class="tab" onclick="switchTab('borrow')">🤲 Saya Hutang Orang</button>
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn-report ws" onclick="openWsModal()">📲 WhatsApp</button>
+      <button class="btn-report pdf-btn" onclick="window.print()">🖨 PDF</button>
+      <button class="btn-report csv-btn" onclick="exportCSV()">📥 CSV</button>
+      <button class="btn-add" onclick="openAddModal()">＋ Add</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <input class="filter-search" id="searchInput" placeholder="🔍 Cari nama / lender..." oninput="renderAdminView()"/>
+    <select class="filter-select" id="filterStatus" onchange="renderAdminView()">
+      <option value="all">Semua Status</option>
+      <option value="pending">Pending</option>
+      <option value="overdue">Overdue</option>
+      <option value="settled">Settled</option>
+    </select>
+    <select class="filter-select" id="sortBy" onchange="renderAdminView()">
+      <option value="date_desc">Terbaru</option>
+      <option value="amount_desc">Hutang Tertinggi</option>
+      <option value="amount_asc">Hutang Terendah</option>
+      <option value="remaining_desc">Baki Tertinggi</option>
+      <option value="name_asc">Nama A–Z</option>
+    </select>
+  </div>
+
+  <div class="card-list" id="cardList"></div>
+</div>
+
+<!-- PUBLIC VIEW -->
+<div class="container hidden" id="publicView">
+  <div class="public-banner">
+    <div class="public-avatar" id="publicAvatar"></div>
+    <div>
+      <div class="public-name" id="publicName">Loading...</div>
+      <div class="public-sub" id="publicSub"></div>
+      <div class="public-readonly">👁 View Only — Read Only</div>
+    </div>
+  </div>
+  <div class="summary-grid">
+    <div class="summary-card"><div class="summary-label">Jumlah Asal</div><div class="summary-value amber" id="pubOriginal">RM 0.00</div></div>
+    <div class="summary-card"><div class="summary-label">Sudah Bayar</div><div class="summary-value jade" id="pubPaid">RM 0.00</div></div>
+    <div class="summary-card"><div class="summary-label">Baki Hutang</div><div class="summary-value rose" id="pubRemaining">RM 0.00</div></div>
+  </div>
+  <div class="card-list" id="pubCardList"></div>
+</div>
+
+<!-- MODAL: ADD/EDIT -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Add Hutang</div>
+    <div class="field"><label>Nama Penghutang / Pemberi Hutang</label><input type="text" id="fName" placeholder="e.g. Kak Farah"/></div>
+    <div class="field"><label>Jenis</label>
+      <select id="fType">
+        <option value="lend">💸 Dia hutang dekat saya (saya bagi pinjam)</option>
+        <option value="borrow">🤲 Saya hutang dia (saya pinjam dari dia)</option>
+      </select>
+    </div>
+    <div class="field"><label>Nama Lender / Pemberi Pinjam</label><input type="text" id="fLender" placeholder="e.g. Nama anda, Bank, dll."/></div>
+    <div class="field"><label>Jumlah (RM)</label><input type="number" id="fAmount" placeholder="0.00" min="0" step="0.01"/></div>
+    <div class="field"><label>Tarikh Mula</label><input type="date" id="fDate"/></div>
+    <div class="field"><label>Due Date (optional)</label><input type="date" id="fDue"/></div>
+    <div class="field"><label>Nota</label><input type="text" id="fNote" placeholder="e.g. Hutang makan, sewa, modal..."/></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Batal</button>
+      <button class="btn-primary" onclick="saveEntry()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PAYMENT -->
+<div class="modal-overlay hidden" id="payModalOverlay">
+  <div class="modal">
+    <div class="modal-title">Rekod Pembayaran</div>
+    <div class="field"><label>Jumlah Bayar (RM)</label><input type="number" id="payAmount" placeholder="0.00" min="0" step="0.01"/></div>
+    <div class="field"><label>Tarikh</label><input type="date" id="payDate"/></div>
+    <div class="field"><label>Nota (optional)</label><input type="text" id="payNote" placeholder="e.g. Cash, TNG, Bank Transfer"/></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePayModal()">Batal</button>
+      <button class="btn-primary" onclick="savePayment()">Rekod</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: WHATSAPP -->
+<div class="modal-overlay hidden" id="wsModalOverlay">
+  <div class="modal">
+    <div class="modal-title">📲 Hantar via WhatsApp</div>
+    <div class="ws-option" onclick="wsSendSelf();closeWsModal()">
+      <div class="ws-option-title">📋 Ringkasan Penuh ke Nombor Sendiri</div>
+      <div class="ws-option-sub">Semua hutang dalam satu mesej — untuk rekod peribadi kau</div>
+    </div>
+    <div class="section-label">Atau hantar kepada individu:</div>
+    <div class="ws-person-list" id="wsPersonList"></div>
+    <div class="modal-actions"><button class="btn-cancel" onclick="closeWsModal()">Tutup</button></div>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast"></div>
+
+<script>
+const STORAGE_KEY='lifehub_hutang_v2';
+let _mem=null;
+function loadData(){if(_mem!==null)return _mem;try{const r=localStorage.getItem(STORAGE_KEY);return r?JSON.parse(r):[]}catch{_mem=[];return _mem}}
+function saveData(d){if(_mem!==null){_mem=d;return}try{localStorage.setItem(STORAGE_KEY,JSON.stringify(d))}catch{_mem=d}}
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+
+const params=new URLSearchParams(location.search);
+const viewId=params.get('view');
+const isPublic=!!viewId;
+document.getElementById('viewBadge').textContent=isPublic?'View Hutang':'Admin';
+document.getElementById('viewBadge').classList.add(isPublic?'badge-public':'badge-admin');
+if(isPublic){document.getElementById('adminView').classList.add('hidden');document.getElementById('publicView').classList.remove('hidden');renderPublicView(viewId)}
+else renderAdminView();
+
+let currentTab='lend',editId=null,payTargetId=null;
+
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='lend')||(i===1&&tab==='borrow')));
+  renderAdminView();
+}
+
+function getFiltered(){
+  const data=loadData();
+  const search=(document.getElementById('searchInput')?.value||'').toLowerCase();
+  const sf=document.getElementById('filterStatus')?.value||'all';
+  const sv=document.getElementById('sortBy')?.value||'date_desc';
+  let list=data.filter(d=>d.type===currentTab);
+  if(search)list=list.filter(d=>d.name.toLowerCase().includes(search)||(d.lender||'').toLowerCase().includes(search));
+  if(sf!=='all')list=list.filter(d=>{const r=remaining(d);if(sf==='settled')return r<=0;if(sf==='overdue')return r>0&&isOverdue(d);if(sf==='pending')return r>0&&!isOverdue(d)});
+  list.sort((a,b)=>{
+    if(sv==='amount_desc')return b.amount-a.amount;
+    if(sv==='amount_asc')return a.amount-b.amount;
+    if(sv==='name_asc')return a.name.localeCompare(b.name);
+    if(sv==='remaining_desc')return remaining(b)-remaining(a);
+    return new Date(b.date)-new Date(a.date);
+  });
+  return list;
+}
+
+function renderAdminView(){
+  const data=loadData();
+  const lend=data.filter(d=>d.type==='lend');
+  const borr=data.filter(d=>d.type==='borrow');
+  const totalOwed=lend.reduce((s,d)=>s+remaining(d),0);
+  const totalOwe=borr.reduce((s,d)=>s+remaining(d),0);
+  const net=totalOwed-totalOwe;
+  document.getElementById('totalOwedToMe').textContent=fmt(totalOwed);
+  document.getElementById('totalIOwe').textContent=fmt(totalOwe);
+  const ne=document.getElementById('netBalance');
+  ne.textContent=fmt(Math.abs(net));ne.className='summary-value '+(net>=0?'jade':'rose');
+  document.getElementById('activeCount').textContent=data.filter(d=>remaining(d)>0).length;
+  const list=document.getElementById('cardList');
+  const filtered=getFiltered();
+  if(!filtered.length){list.innerHTML=`<div class="empty-state"><div class="empty-icon">${currentTab==='lend'?'💸':'🤲'}</div><div class="empty-text">Tiada rekod. Tekan "+ Add" untuk tambah.</div></div>`;return}
+  list.innerHTML=filtered.map(d=>cardHTML(d,true)).join('');
+}
+
+function cardHTML(d,isAdmin){
+  const paid=totalPaid(d),rem=remaining(d),pct=d.amount>0?Math.min(100,(paid/d.amount)*100):0;
+  const status=rem<=0?'settled':isOverdue(d)?'overdue':'pending';
+  const statusLabel=rem<=0?'Settled':isOverdue(d)?'Overdue':'Pending';
+  const col=rem<=0?'jade':isOverdue(d)?'rose':'amber';
+  const paymentsHTML=d.payments?.length?d.payments.map(p=>`<div class="payment-item"><span class="payment-date">${formatDate(p.date)}${p.note?' · '+esc(p.note):''}</span><span class="payment-amt">+RM ${p.amount.toFixed(2)}</span></div>`).join(''):'<div style="color:var(--muted);font-size:12px;padding:4px 0">Belum ada pembayaran dicatat.</div>';
+  const lenderLine=d.lender?`<div class="card-lender">🏦 ${esc(d.lender)}</div>`:'';
+  const adminActions=isAdmin?`<div class="card-actions">${rem>0?`<button class="btn-sm success" onclick="openPayModal('${d.id}')">＋ Bayar</button>`:''}<button class="btn-sm share-btn" onclick="openShareModal('${d.id}')">🔗 Share Link</button><button class="btn-sm ws-btn" onclick="wsSendPerson('${d.id}')">📲 WS</button><button class="btn-sm" onclick="openEditModal('${d.id}')">✏️ Edit</button><button class="btn-sm danger" onclick="deleteEntry('${d.id}')">🗑</button></div>`:'';
+  return `<div class="hutang-card ${status}" id="card-${d.id}"><div class="card-top"><div><div class="card-name">${esc(d.name)}</div>${lenderLine}<div class="card-note">${esc(d.note||'')}${d.due?' · Due '+formatDate(d.due):''}</div></div><div class="card-right"><div class="card-amount ${col}">${fmt(rem)}</div><span class="status-pill status-${status}">${statusLabel}</span></div></div><div class="progress-wrap"><div class="progress-label"><span>Bayar: ${fmt(paid)}</span><span>Asal: ${fmt(d.amount)}</span></div><div class="progress-bar"><div class="progress-fill ${col}" style="width:${pct}%"></div></div></div><div class="payment-section"><div class="payment-title">Rekod Pembayaran</div>${paymentsHTML}</div>${adminActions}</div>`;
+}
+
+function renderPublicView(id){
+  const data=loadData();
+  const d=data.find(x=>x.id===id);
+  if(!d){document.getElementById('publicView').innerHTML='<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-text">Rekod tidak dijumpai. Hubungi pemilik akaun.</div></div>';return}
+  const initial=d.name.trim()[0].toUpperCase();
+  document.getElementById('publicAvatar').textContent=initial;
+  document.getElementById('publicName').textContent=d.name;
+  const dir=d.type==='lend'?`Anda berhutang${d.lender?' dengan '+d.lender:''}`:`${d.lender||'Pemilik akaun'} berhutang dengan anda`;
+  document.getElementById('publicSub').textContent=dir;
+  const paid=totalPaid(d),rem=remaining(d);
+  document.getElementById('pubOriginal').textContent=fmt(d.amount);
+  document.getElementById('pubPaid').textContent=fmt(paid);
+  document.getElementById('pubRemaining').textContent=fmt(rem);
+  document.getElementById('pubCardList').innerHTML=cardHTML(d,false);
+}
+
+function openShareModal(id){
+  const d=loadData().find(x=>x.id===id);if(!d)return;
+  const url=`${location.origin}${location.pathname}?view=${id}`;
+  const msg=`Assalamualaikum ${d.name} 👋\n\nBerikut adalah ringkasan hutang anda:\n🔗 ${url}\n\nSila semak baki dan rekod pembayaran anda.`;
+  navigator.clipboard.writeText(url).catch(()=>{});
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+  showToast('✓ Link disalin & WhatsApp dibuka!');
+}
+
+function openWsModal(){
+  const data=loadData();
+  const active=data.filter(d=>remaining(d)>0);
+  const listEl=document.getElementById('wsPersonList');
+  if(!active.length){listEl.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px">Tiada hutang aktif.</div>'}
+  else{listEl.innerHTML=active.map(d=>`<div class="ws-person-item"><div><div class="ws-person-name">${esc(d.name)}</div><div style="font-size:11px;color:var(--muted)">${d.type==='lend'?'Dia hutang dekat saya':'Saya hutang dia'}</div></div><div style="display:flex;align-items:center;gap:8px"><span class="ws-person-amt">${fmt(remaining(d))}</span><button class="btn-ws-send" onclick="wsSendPerson('${d.id}');closeWsModal()">Hantar</button></div></div>`).join('')}
+  document.getElementById('wsModalOverlay').classList.remove('hidden');
+}
+function closeWsModal(){document.getElementById('wsModalOverlay').classList.add('hidden')}
+
+function wsSendSelf(){
+  const data=loadData();
+  const lend=data.filter(d=>d.type==='lend'&&remaining(d)>0);
+  const borr=data.filter(d=>d.type==='borrow'&&remaining(d)>0);
+  let msg=`📊 *HUTANG TRACKER — RINGKASAN*\n_${new Date().toLocaleDateString('ms-MY',{day:'numeric',month:'long',year:'numeric'})}_\n\n`;
+  if(lend.length){msg+=`💸 *ORANG HUTANG DEKAT SAYA*\n`;lend.forEach(d=>{msg+=`• ${d.name}: *${fmt(remaining(d))}* (asal ${fmt(d.amount)})\n`});msg+=`Total: *${fmt(lend.reduce((s,d)=>s+remaining(d),0))}*\n\n`}
+  if(borr.length){msg+=`🤲 *SAYA HUTANG ORANG*\n`;borr.forEach(d=>{msg+=`• ${d.name}: *${fmt(remaining(d))}* (asal ${fmt(d.amount)})\n`});msg+=`Total: *${fmt(borr.reduce((s,d)=>s+remaining(d),0))}*\n\n`}
+  const net=lend.reduce((s,d)=>s+remaining(d),0)-borr.reduce((s,d)=>s+remaining(d),0);
+  msg+=`📌 *Net: ${net>=0?'+':''}${fmt(net)}*`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+function wsSendPerson(id){
+  const d=loadData().find(x=>x.id===id);if(!d)return;
+  const rem=remaining(d),paid=totalPaid(d);
+  const url=`${location.origin}${location.pathname}?view=${id}`;
+  let msg=`Assalamualaikum ${d.name} 👋\n\n`;
+  if(d.type==='lend'){msg+=`Sekadar peringatan mesra mengenai hutang anda 🙏\n\n`}
+  else{msg+=`Sekadar rekod hutang saya kepada anda:\n\n`}
+  msg+=`💰 *Jumlah Asal:* ${fmt(d.amount)}\n✅ *Sudah Bayar:* ${fmt(paid)}\n⏳ *Baki:* *${fmt(rem)}*\n`;
+  if(d.note)msg+=`📝 *Nota:* ${d.note}\n`;
+  if(d.due)msg+=`📅 *Due:* ${formatDate(d.due)}\n`;
+  msg+=`\n🔗 Semak butiran lengkap:\n${url}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+function openAddModal(){editId=null;document.getElementById('modalTitle').textContent='Add Hutang';document.getElementById('fName').value='';document.getElementById('fType').value=currentTab;document.getElementById('fLender').value='';document.getElementById('fAmount').value='';document.getElementById('fDate').value=today();document.getElementById('fDue').value='';document.getElementById('fNote').value='';document.getElementById('modalOverlay').classList.remove('hidden')}
+function openEditModal(id){const d=loadData().find(x=>x.id===id);if(!d)return;editId=id;document.getElementById('modalTitle').textContent='Edit Hutang';document.getElementById('fName').value=d.name;document.getElementById('fType').value=d.type;document.getElementById('fLender').value=d.lender||'';document.getElementById('fAmount').value=d.amount;document.getElementById('fDate').value=d.date;document.getElementById('fDue').value=d.due||'';document.getElementById('fNote').value=d.note||'';document.getElementById('modalOverlay').classList.remove('hidden')}
+function closeModal(){document.getElementById('modalOverlay').classList.add('hidden')}
+function saveEntry(){
+  const name=document.getElementById('fName').value.trim();
+  const type=document.getElementById('fType').value;
+  const lender=document.getElementById('fLender').value.trim();
+  const amount=parseFloat(document.getElementById('fAmount').value);
+  const date=document.getElementById('fDate').value;
+  const due=document.getElementById('fDue').value;
+  const note=document.getElementById('fNote').value.trim();
+  if(!name||isNaN(amount)||!date){alert('Sila isi nama, jumlah, dan tarikh.');return}
+  const data=loadData();
+  if(editId){const idx=data.findIndex(x=>x.id===editId);if(idx!==-1)data[idx]={...data[idx],name,type,lender,amount,date,due,note}}
+  else data.push({id:genId(),name,type,lender,amount,date,due,note,payments:[]});
+  saveData(data);closeModal();renderAdminView();
+}
+
+function openPayModal(id){payTargetId=id;document.getElementById('payAmount').value='';document.getElementById('payDate').value=today();document.getElementById('payNote').value='';document.getElementById('payModalOverlay').classList.remove('hidden')}
+function closePayModal(){document.getElementById('payModalOverlay').classList.add('hidden')}
+function savePayment(){
+  const amount=parseFloat(document.getElementById('payAmount').value);
+  const date=document.getElementById('payDate').value;
+  const note=document.getElementById('payNote').value.trim();
+  if(isNaN(amount)||!date){alert('Sila isi jumlah dan tarikh.');return}
+  const data=loadData();const d=data.find(x=>x.id===payTargetId);if(!d)return;
+  if(!d.payments)d.payments=[];d.payments.push({amount,date,note});
+  saveData(data);closePayModal();renderAdminView();
+}
+
+function deleteEntry(id){if(!confirm('Padam rekod ini?'))return;saveData(loadData().filter(x=>x.id!==id));renderAdminView()}
+
+function exportCSV(){
+  const data=loadData();
+  const rows=[['Nama','Lender','Jenis','Jumlah Asal','Sudah Bayar','Baki','Status','Tarikh Mula','Due Date','Nota']];
+  data.forEach(d=>{const paid=totalPaid(d),rem=remaining(d),status=rem<=0?'Settled':isOverdue(d)?'Overdue':'Pending';rows.push([d.name,d.lender||'',d.type==='lend'?'Orang hutang saya':'Saya hutang orang',d.amount.toFixed(2),paid.toFixed(2),rem.toFixed(2),status,d.date,d.due||'',d.note||''])});
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`hutang_${today()}.csv`;a.click();
+  showToast('✓ CSV berjaya dimuat turun!');
+}
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),3000)}
+function totalPaid(d){return(d.payments||[]).reduce((s,p)=>s+p.amount,0)}
+function remaining(d){return Math.max(0,d.amount-totalPaid(d))}
+function isOverdue(d){return d.due&&new Date(d.due)<new Date()&&remaining(d)>0}
+function fmt(n){return'RM '+n.toFixed(2)}
+function today(){return new Date().toISOString().slice(0,10)}
+function formatDate(s){return new Date(s).toLocaleDateString('ms-MY',{day:'numeric',month:'short',year:'numeric'})}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+</script>
+</body>
+</html>
