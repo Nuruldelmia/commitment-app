@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>Hutang Tracker · LifeHub</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{--bg:#0F172A;--surface:#1E293B;--surface2:#273348;--border:#334155;--text:#F1F5F9;--muted:#94A3B8;--jade:#10B981;--jade-dim:#065F46;--amber:#F59E0B;--amber-dim:#78350F;--rose:#F43F5E;--rose-dim:#881337;--blue:#60A5FA;--blue-dim:#1E3A5F;--purple:#A78BFA;--radius:12px;--mono:'JetBrains Mono',monospace}
-body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:14px;line-height:1.6}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;font-size:14px;line-height:1.6;-webkit-text-size-adjust:100%}
 .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .topbar-left{display:flex;align-items:center;gap:10px}
 .logo-dot{width:8px;height:8px;border-radius:50%;background:var(--jade)}
@@ -247,11 +247,20 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 
 <script>
 const STORAGE_KEY='lifehub_hutang_v2';
-let _mem=null;
-function loadData(){if(_mem!==null)return _mem;try{const r=localStorage.getItem(STORAGE_KEY);return r?JSON.parse(r):[]}catch{_mem=[];return _mem}}
-function saveData(d){if(_mem!==null){_mem=d;return}try{localStorage.setItem(STORAGE_KEY,JSON.stringify(d))}catch{_mem=d}}
+let _mem=[];
+let _useLS=false;
+try{localStorage.setItem('__t','1');localStorage.removeItem('__t');_useLS=true;}catch(e){_useLS=false;}
+function loadData(){
+  if(_useLS){try{const r=localStorage.getItem(STORAGE_KEY);return r?JSON.parse(r):_mem;}catch(e){return _mem;}}
+  return _mem;
+}
+function saveData(d){
+  _mem=d;
+  if(_useLS){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(d));}catch(e){}}
+}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 
+try{
 const params=new URLSearchParams(location.search);
 const viewId=params.get('view');
 const isPublic=!!viewId;
@@ -260,6 +269,7 @@ document.getElementById('viewBadge').classList.add(isPublic?'badge-public':'badg
 if(!isPublic) document.getElementById('backBtn').style.display='block';
 if(isPublic){document.getElementById('adminView').classList.add('hidden');document.getElementById('publicView').classList.remove('hidden');renderPublicView(viewId)}
 else renderAdminView();
+}catch(e){console.warn('Init error:',e);renderAdminView();}
 
 let currentTab='lend',editId=null,payTargetId=null;
 
