@@ -1206,9 +1206,7 @@ function delIt(type,id){
 }
 // ✅ EDIT 3b: loadHutang function
 function loadHutang(){
-  const p=document.getElementById('p-hutang');
-  if(p.querySelector('iframe'))return;
-  p.innerHTML='<iframe src="hutang.html" style="width:100%;height:calc(100vh - 56px - 64px - env(safe-area-inset-bottom));border:none;display:block"></iframe>';
+  window.location.href='hutang.html';
 }
 function renderAll(){renderDashboard();renderCommit();renderDebt();renderTasks();}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM();});
