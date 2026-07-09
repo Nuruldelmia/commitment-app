@@ -936,7 +936,7 @@ function debtCard(d){
     stBtns+='<button onclick="setDebtSt(this.dataset.id,this.dataset.st)" data-id="'+d.id+'" data-st="'+st+'" style="flex:1;padding:7px 2px;border-radius:8px;border:1.5px solid '+sbd+';cursor:pointer;font-size:10px;font-weight:700;font-family:Inter,sans-serif;background:'+sbg+';color:'+sco+'">'+st+'</button>';
   }
   return '<div class="card-flat" style="margin-bottom:7px;padding:0;overflow:hidden">'
-    +'<div class="coll-header" onclick="toggleColl('"+expandId+"')">'
+    +'<div class="coll-header" onclick="toggleColl(\'"+expandId+"\')">'
     +'<div style="width:34px;height:34px;border-radius:8px;background:'+typeBg+';display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">'+typeIco+'</div>'
     +'<div style="flex:1;min-width:0">'
     +'<div class="t-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(d.name)+'</div>'
@@ -960,9 +960,9 @@ function debtCard(d){
     +descHtml
     +'<div class="flex g4 mb8">'+stBtns+'</div>'
     +'<div class="flex g5">'
-    +'<button onclick="openPayDebt('"+d.id+"')" class="btn flex1" style="font-size:11px;background:var(--primaryLight);color:var(--primary)">Record Payment</button>'
-    +'<button onclick="openDebtForm('"+d.id+"')" class="btn btn-ghost" style="padding:7px 10px">Edit</button>'
-    +'<button onclick="delConfirm('debt','"+d.id+"')" class="btn btn-danger" style="padding:7px 10px">Del</button>'
+    +'<button onclick="openPayDebt(\'"+d.id+"\')" class="btn flex1" style="font-size:11px;background:var(--primaryLight);color:var(--primary)">Record Payment</button>'
+    +'<button onclick="openDebtForm(\'"+d.id+"\')" class="btn btn-ghost" style="padding:7px 10px">Edit</button>'
+    +'<button onclick="delConfirm(\'debt\',\'"+d.id+"\')" class="btn btn-danger" style="padding:7px 10px">Del</button>'
     +'</div>'
     +'</div></div></div>';
 }
@@ -1037,13 +1037,21 @@ function ccCardView(c){
   const instOnCard=S.installments.filter(i=>i.cardId===c.id&&i.status==='Active');
   const instTotal=instOnCard.reduce((s,i)=>s+Number(i.monthly||0),0);
   const utilClass=util>60?'util-high':util>30?'util-med':'util-low';
-  return`<div class="card-glow mb10" style="border-top:3px solid ${c.color||'var(--cyan)'}">
-    <div class="row mb10">
-      <div><div class="t-md fw7 mb4">${esc(c.name)}</div>
-        <div class="flex g5"><span class="chip cc">${esc(c.type||'Visa')}</span><span class="chip cp">•••• ${esc(c.last4||'xxxx')}</span></div>
+  const eid='cc-exp-'+c.id;
+  return`<div class="card-flat" style="border-top:3px solid ${c.color||'var(--cyan)'};padding:0;overflow:hidden;margin-bottom:9px">
+    <div class="coll-header" onclick="toggleColl('${eid}')">
+      <div style="width:34px;height:34px;border-radius:10px;background:${c.color||'var(--cyan)'}20;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💳</div>
+      <div style="flex:1;min-width:0">
+        <div class="t-name">${esc(c.name)}</div>
+        <div class="flex g4"><span class="chip cc">${esc(c.type||'Visa')}</span><span class="chip cp">•••• ${esc(c.last4||'xxxx')}</span><span class="t-xs ${utilClass} fw6">${util.toFixed(0)}%</span></div>
       </div>
-      <div class="tar"><div class="t-lg mono c-r fw7">${fmtRM(c.outstanding)}</div><div class="t-xs c-m">of ${fmtRM(c.limit)}</div></div>
+      <div style="text-align:right;flex-shrink:0;margin-right:6px">
+        <div class="t-amt c-r">${fmtRM(c.outstanding)}</div>
+        <div class="t-xs c-m">of ${fmtRM(c.limit)}</div>
+      </div>
+      <div class="coll-arrow" id="${eid}-arrow">▶</div>
     </div>
+    <div class="coll-body" id="${eid}" style="padding:0 12px"><div style="padding-bottom:12px">
     ${bar(util,util>60?'var(--red)':util>30?'var(--amber)':'var(--green)',6)}
     <div class="row mt6 mb10"><span class="t-xs ${utilClass} fw6">${util.toFixed(0)}% used</span><span class="t-xs c-m">Available: ${fmtRM(avail)}</span></div>
     <div class="grid2 mb8" style="gap:6px">
@@ -1057,7 +1065,7 @@ function ccCardView(c){
       <button onclick="openCardForm('${c.id}')" class="btn btn-ghost flex1" style="font-size:12px">✏️ Edit</button>
       <button onclick="delConfirm('card','${c.id}')" class="btn btn-danger flex1" style="font-size:12px">\uD83D\uDDD1️</button>
     </div>
-  </div>`;
+  </div></div></div>`;
 }
 
 function instCard(i){
@@ -1152,15 +1160,22 @@ function goldCard(g){
   const curVal=curP*Number(g.grams||0);
   const buyVal=Number(g.buyPricePerG||0)*Number(g.grams||0);
   const pnl=curVal-buyVal;const pnlPos=pnl>=0;const pnlPct=buyVal>0?(pnl/buyVal)*100:0;
-  return`<div class="gold-card">
-    ${g.photo?'<div style="width:100%;height:150px;border-radius:10px;overflow:hidden;margin-bottom:10px;cursor:pointer" onclick="viewPhoto(\''+(g.id)+'\')"><img src="'+(g.photo)+'" style="width:100%;height:100%;object-fit:cover"/></div>':''}
-    <div class="row mb8">
-      <div style="flex:1;padding-right:8px">
-        <div class="t-sm fw7 mb5">${esc(g.name)}</div>
-        <div class="flex g5 wrap"><span class="chip ${g.purity==='999'?'cgold':'ca'}">${g.purity}</span><span class="chip cc">${esc(g.type)}</span><span class="t-xs c-m">${fmtDt(g.buyDate)}</span></div>
+  const eid='gold-exp-'+g.id;
+  return`<div class="gold-card" style="padding:0;overflow:hidden">
+    <div class="coll-header" onclick="toggleColl('${eid}')" style="padding:12px">
+      <div style="width:34px;height:34px;border-radius:8px;background:var(--goldBg);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🥇</div>
+      <div style="flex:1;min-width:0">
+        <div class="t-name">${esc(g.name)}</div>
+        <div class="flex g4"><span class="chip ${g.purity==='999'?'cgold':'ca'}">${g.purity}</span><span class="chip cc">${esc(g.type)}</span><span class="t-xs c-m">${Number(g.grams).toFixed(2)}g</span></div>
       </div>
-      <div class="tar"><div class="t-md mono fw7 c-gold">${fmtRM(curVal)}</div><div class="t-xs c-m">est. value</div></div>
+      <div style="text-align:right;flex-shrink:0;margin-right:6px">
+        <div class="t-amt c-gold">${fmtRM(curVal)}</div>
+        <div class="t-xs ${pnlPos?'pnl-pos':'pnl-neg'}">${pnlPos?'+':''}${fmtRM(pnl)}</div>
+      </div>
+      <div class="coll-arrow" id="${eid}-arrow">▶</div>
     </div>
+    <div class="coll-body" id="${eid}" style="padding:0 14px"><div style="padding-bottom:14px">
+    ${g.photo?'<div style="width:100%;height:150px;border-radius:10px;overflow:hidden;margin-bottom:10px;cursor:pointer" onclick="viewPhoto(\'+(g.id)+\')"><img src="'+(g.photo)+'" style="width:100%;height:100%;object-fit:cover"/></div>':''}
     <div class="grid3 mb8" style="gap:5px">
       <div class="info-box" style="flex-direction:column;margin:0"><div class="lbl">WEIGHT</div><div class="t-xs mono fw7 c-a">${Number(g.grams).toFixed(2)}g</div></div>
       <div class="info-box" style="flex-direction:column;margin:0"><div class="lbl">BUY/g</div><div class="t-xs mono fw7 c-m">${fmtRM(g.buyPricePerG)}</div></div>
@@ -1170,13 +1185,15 @@ function goldCard(g){
       <span class="t-xs c-m">P&L vs cost</span>
       <span class="t-xs mono fw7 ${pnlPos?'pnl-pos':'pnl-neg'}">${pnlPos?'+':''}${fmtRM(pnl)} (${pnlPos?'+':''}${pnlPct.toFixed(1)}%)</span>
     </div>
+    <div class="t-xs c-m mb8">${fmtDt(g.buyDate)}</div>
     ${g.notes?'<div class="t-xs c-m italic mb8">'+(esc(g.notes))+'</div>':''}
     <div class="flex g6">
       <button onclick="openGoldForm('${g.id}')" class="btn btn-ghost flex1" style="font-size:12px">✏️</button>
-      <button onclick="quickPhoto('${g.id}')" class="btn flex1" style="font-size:12px;background:rgba(255,215,0,.1);color:var(--gold);border:1px solid rgba(255,215,0,.2)">${g.photo?'\uD83D\uDDBC️':'\uD83D\uDCF7'}</button>
+      <button onclick="quickPhoto('${g.id}')" class="btn flex1" style="font-size:12px;background:rgba(255,215,0,.1);color:var(--gold);border:1px solid rgba(255,215,0,.2)">${g.photo?'\uD83D\uDDBC\uFE0F':'\uD83D\uDCF7'}</button>
       <button onclick="waGold('${g.id}')" class="btn flex1" style="font-size:12px;background:rgba(37,211,102,.1);color:#25D366;border:1px solid rgba(37,211,102,.2)">\uD83D\uDCF2</button>
-      <button onclick="delConfirm('gold','${g.id}')" class="btn btn-danger" style="padding:9px">\uD83D\uDDD1️</button>
+      <button onclick="delConfirm('gold','${g.id}')" class="btn btn-danger" style="padding:9px">\uD83D\uDDD1\uFE0F</button>
     </div>
+    </div></div>
   </div>`;
 }
 
@@ -1208,12 +1225,21 @@ function renderSaves(){
       const mos=s.monthly>0?Math.ceil(left/s.monthly):null;
       const col=p>=100?'var(--green)':p>=50?'var(--cyan)':'var(--purple)';
       const prioCol={High:'cr',Medium:'ca',Low:'cc'}[s.priority]||'cc';
-      return`<div class="card-glow mb10" style="border-color:${col}25">
-        <div class="row mb10">
-          <div><div class="flex g8 mb5"><span style="font-size:20px">${PURP_ICONS[s.purpose]||'\uD83D\uDCB0'}</span><span class="t-md fw7">${esc(s.name)}</span></div>
-          <div class="flex g5"><span class="chip cp">${esc(s.purpose)}</span><span class="chip ${prioCol}">${s.priority}</span>${p>=100?'<span class="chip cg">✓ Done!</span>':''}</div></div>
-          <div class="tar"><div class="t-lg mono c-g fw7">${fmtRM(s.current)}</div><div class="t-xs c-m">of ${fmtRM(s.target)}</div></div>
+      const eid='save-exp-'+s.id;
+      return`<div class="card-flat" style="border-left:3px solid ${col};padding:0;overflow:hidden;margin-bottom:9px">
+        <div class="coll-header" onclick="toggleColl('${eid}')">
+          <span style="font-size:20px">${PURP_ICONS[s.purpose]||'\uD83D\uDCB0'}</span>
+          <div style="flex:1;min-width:0">
+            <div class="t-name">${esc(s.name)}</div>
+            <div class="flex g4"><span class="chip cp">${esc(s.purpose)}</span><span class="chip ${prioCol}">${s.priority}</span>${p>=100?'<span class="chip cg">✓ Done!</span>':''}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-right:6px">
+            <div class="t-amt c-g">${fmtRM(s.current)}</div>
+            <div class="t-xs c-m">of ${fmtRM(s.target)}</div>
+          </div>
+          <div class="coll-arrow" id="${eid}-arrow">▶</div>
         </div>
+        <div class="coll-body" id="${eid}" style="padding:0 12px"><div style="padding-bottom:12px">
         ${bar(p,col,10)}
         <div class="row mt6 mb10">
           <span class="t-xs c-m">${p.toFixed(0)}% reached</span>
@@ -1221,6 +1247,7 @@ function renderSaves(){
           ${mos&&p<100?('<span class="t-xs c-m">~'+mos+'mo left</span>'):''}
         </div>
         <div class="flex g8"><button onclick="openSaveForm('${s.id}')" class="btn btn-ghost flex1" style="font-size:12px">✏️ Edit</button><button onclick="delConfirm('save','${s.id}')" class="btn btn-danger flex1" style="font-size:12px">\uD83D\uDDD1️</button></div>
+        </div></div>
       </div>`;
     }).join('')}
     ${!items.length?empty('\uD83C\uDFE6','No goals','Start saving towards something.'):''}
@@ -1266,7 +1293,7 @@ function renderProperty(){
       +(p.maintenance?'<div class="info-box"><span class="t-xs c-m">Monthly maintenance</span><span class="t-xs mono c-a">'+fmtRM(p.maintenance)+'</span></div>':'')
       +(p.address?'<div class="t-xs c-m italic mb8">'+esc(p.address)+'</div>':'')
       +'<div class="flex g6"><button onclick="openPropForm(this.dataset.id)" data-id="'+p.id+'" class="btn btn-ghost flex1" style="font-size:12px">Edit</button>'
-      +'<button onclick="delConfirm('prop',this.dataset.id)" data-id="'+p.id+'" class="btn btn-danger flex1" style="font-size:12px">Del</button></div>'
+      +'<button onclick="delConfirm(\'prop\',this.dataset.id)" data-id="'+p.id+'" class="btn btn-danger flex1" style="font-size:12px">Del</button></div>'
       +'</div></div></div>';
   }).join('');
   var assetRows=(S.assets||[]).map(function(a){
@@ -1280,7 +1307,7 @@ function renderProperty(){
       +'<div class="coll-body" id="'+eid+'" style="padding:0 12px"><div style="padding-bottom:12px">'
       +(a.notes?'<div class="t-xs c-m italic mb6">'+esc(a.notes)+'</div>':'')
       +'<div class="flex g6"><button onclick="openAssetForm(this.dataset.id)" data-id="'+a.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
-      +'<button onclick="delConfirm('asset',this.dataset.id)" data-id="'+a.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
+      +'<button onclick="delConfirm(\'asset\',this.dataset.id)" data-id="'+a.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
       +'</div></div></div>';
   }).join('');
   return '<div class="sec">'
@@ -1322,7 +1349,7 @@ function renderInsurance(){
       +(ins.beneficiary?'<div class="info-box"><span class="t-xs c-m">Beneficiary</span><span class="t-xs mono">'+esc(ins.beneficiary)+'</span></div>':'')
       +(dl!==null?'<div class="info-box"><span class="t-xs c-m">Renewal</span><span class="t-xs mono '+(dl<=0?'c-r':soon?'c-a':'c-g')+'">'+fmtDt(ins.renewDate)+(dl<=0?' Expired!':dl<=30?' '+dl+'d left':'')+'</span></div>':'')
       +'<div class="flex g5 mt6"><button onclick="openInsForm(this.dataset.id)" data-id="'+ins.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
-      +'<button onclick="delConfirm('ins',this.dataset.id)" data-id="'+ins.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
+      +'<button onclick="delConfirm(\'ins\',this.dataset.id)" data-id="'+ins.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
       +'</div></div></div>';
   }).join('');
   return '<div class="sec">'
@@ -1354,7 +1381,7 @@ function renderVehicle(){
       +(v.insuranceDate?'<div class="info-box"><span class="t-xs c-m">Insurance</span><span class="t-xs mono '+(il!==null&&il<=0?'c-r':il!==null&&il<=30?'c-a':'c-g')+'">'+fmtDt(v.insuranceDate)+(il!==null&&il<=0?' EXPIRED':il!==null&&il<=30?' ('+il+'d)':'')+'</span></div>':'')
       +(v.lastServiceDate?'<div class="info-box"><span class="t-xs c-m">Next service</span><span class="t-xs mono '+(svcAlert?'c-a':'c-g')+'">'+kmLeft.toLocaleString()+' km left</span></div>':'')
       +'<div class="flex g5 mt6"><button onclick="openVehicleForm(this.dataset.id)" data-id="'+v.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
-      +'<button onclick="delConfirm('vehicle',this.dataset.id)" data-id="'+v.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
+      +'<button onclick="delConfirm(\'vehicle\',this.dataset.id)" data-id="'+v.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
       +'</div></div></div>';
   }).join('');
   return '<div class="sec">'
@@ -1379,7 +1406,7 @@ function renderSubs(){
       +'<div class="coll-body" id="'+eid+'" style="padding:0 12px"><div style="padding-bottom:12px">'
       +(sub.renewDate?'<div class="info-box"><span class="t-xs c-m">Renews</span><span class="t-xs mono c-m">'+fmtDt(sub.renewDate)+'</span></div>':'')
       +'<div class="flex g5 mt6"><button onclick="openSubForm(this.dataset.id)" data-id="'+sub.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
-      +'<button onclick="delConfirm('sub',this.dataset.id)" data-id="'+sub.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
+      +'<button onclick="delConfirm(\'sub\',this.dataset.id)" data-id="'+sub.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
       +'</div></div></div>';
   }).join('');
   return '<div class="sec">'
@@ -1421,7 +1448,7 @@ function renderDocs(){
         +'<div class="flex g5">'
         +'<button onclick="addDocPhoto(this.dataset.id)" data-id="'+doc.id+'" class="btn btn-ghost flex1" style="font-size:11px">'+btnLbl+'</button>'
         +(doc.photo?('<button onclick="viewDocPhoto(this.dataset.id)" data-id="'+doc.id+'" class="btn flex1" style="font-size:11px;background:var(--primaryLight);color:var(--primary)">View</button>'):'')
-        +'<button onclick="delConfirm('doc',this.dataset.id)" data-id="'+doc.id+'" class="btn btn-danger" style="padding:7px 10px">Del</button>'
+        +'<button onclick="delConfirm(\'doc\',this.dataset.id)" data-id="'+doc.id+'" class="btn btn-danger" style="padding:7px 10px">Del</button>'
         +'</div></div>';
     });
   });
@@ -1500,7 +1527,7 @@ function renderDates(){
       +(dl!==null?('<div class="t-xs '+(dl<0?'c-r':dl<=30?'c-a':'c-m')+'">'+Math.abs(dl)+'d '+(dl<0?'ago':'left')+'</div>'):'')
       +'</div>'
       +'<button onclick="openDateForm(this.dataset.id)" data-id="'+d.id+'" class="btn btn-ghost" style="padding:5px 8px;font-size:11px">Edit</button>'
-      +'<button onclick="delConfirm('date',this.dataset.id)" data-id="'+d.id+'" class="btn btn-danger" style="padding:5px 8px;font-size:11px">Del</button>'
+      +'<button onclick="delConfirm(\'date\',this.dataset.id)" data-id="'+d.id+'" class="btn btn-danger" style="padding:5px 8px;font-size:11px">Del</button>'
       +'</div></div></div>';
   }).join('');
   return '<div class="sec">'
@@ -1529,7 +1556,7 @@ function renderWishes(){
       +'<div class="coll-body" id="'+eid+'" style="padding:0 12px"><div style="padding-bottom:12px">'
       +(w.notes?'<div class="t-xs c-m italic mb6">'+esc(w.notes)+'</div>':'')
       +'<div class="flex g5"><button onclick="openWishForm(this.dataset.id)" data-id="'+w.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
-      +'<button onclick="delConfirm('wish',this.dataset.id)" data-id="'+w.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
+      +'<button onclick="delConfirm(\'wish\',this.dataset.id)" data-id="'+w.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
       +'</div></div></div>';
   }).join('');
   return '<div class="sec">'
@@ -1559,7 +1586,7 @@ function renderTax(){
       +(t.cap&&t.cap<t.amount?('<div class="t-xs c-r">Cap: '+fmtRM(t.cap)+'</div>'):'')
       +'</div></div>'
       +'<div class="flex g5"><button onclick="openTaxForm(this.dataset.id)" data-id="'+t.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
-      +'<button onclick="delConfirm('tax',this.dataset.id)" data-id="'+t.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
+      +'<button onclick="delConfirm(\'tax\',this.dataset.id)" data-id="'+t.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
       +'</div>';
   }).join('');
   return '<div class="sec">'
@@ -1710,7 +1737,7 @@ function renderGoalsList(){
       +stHtml+dlHtml+'</div></div>'
       +'<div class="flex g4">'
       +'<button onclick="openGoalForm(this.dataset.id)" data-id="'+g.id+'" class="btn btn-ghost" style="padding:7px;font-size:12px">Edit</button>'
-      +'<button onclick="delConfirm('goal',this.dataset.id)" data-id="'+g.id+'" class="btn btn-danger" style="padding:7px;font-size:12px">Del</button>'
+      +'<button onclick="delConfirm(\'goal\',this.dataset.id)" data-id="'+g.id+'" class="btn btn-danger" style="padding:7px;font-size:12px">Del</button>'
       +'</div></div>'
       +'<div class="row mb5"><span class="t-xs c-m">Progress</span><span class="t-xs mono fw7" style="color:'+col+'">'+g.progress+'%</span></div>'
       +'<div class="bar-bg mb8"><div class="bar-fill" style="height:8px;width:'+g.progress+'%;background:'+col+'"></div></div>'
@@ -1761,7 +1788,7 @@ function renderHealth(){
       +(dl!==null?('<div class="t-xs c-m">'+(dl<=0?'Overdue!':dl+'d left')+'</div>'):'')+'</div></div>'
       +'<div class="info-box mt4"><span class="t-xs c-m">Last done</span><span class="t-xs mono c-m">'+fmtDt(sc.lastDate)+'</span></div>'
       +'<div class="flex g6 mt6"><button onclick="openScreeningForm(this.dataset.id)" data-id="'+sc.id+'" class="btn btn-ghost flex1" style="font-size:12px">Edit</button>'
-      +'<button onclick="delConfirm('screening',this.dataset.id)" data-id="'+sc.id+'" class="btn btn-danger flex1" style="font-size:12px">Del</button></div>'
+      +'<button onclick="delConfirm(\'screening\',this.dataset.id)" data-id="'+sc.id+'" class="btn btn-danger flex1" style="font-size:12px">Del</button></div>'
       +'</div>';
   }).join('');
   var logRows=log.slice(-7).reverse().map(function(l){
@@ -2363,6 +2390,7 @@ function addReceipt(id){
   const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
   inp.onchange=function(){const r=new FileReader();r.onload=e=>{if(!S.taxClaims)S.taxClaims=[];S.taxClaims=S.taxClaims.map(t=>t.id===id?{...t,receipt:e.target.result}:t);sv('taxClaims');rp()};r.readAsDataURL(inp.files[0])};inp.click();
 }
+function viewTaxReceipt(id){return viewReceipt(id);}
 function viewReceipt(id){const t=(S.taxClaims||[]).find(i=>i.id===id);if(!t||!t.receipt)return;openModal('\uD83E\uDDFE '+esc(t.name),`<img src="${t.receipt}" style="width:100%;border-radius:12px;object-fit:contain;max-height:70vh"/>`)}
 
 // ══════════════════════════════════════════════
@@ -2550,7 +2578,7 @@ function renderEssentials(){
         +'<div class="flex g5">'
         +'<button onclick="openEssForm(this.dataset.id)" data-id="'+e.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
         +'<button onclick="openRestockForm(this.dataset.id)" data-id="'+e.id+'" class="btn flex1" style="font-size:11px;background:var(--primaryLight);color:var(--primary)">Restock</button>'
-        +'<button onclick="delConfirm('essential',this.dataset.id)" data-id="'+e.id+'" class="btn btn-danger" style="padding:7px 10px;font-size:11px">Del</button>'
+        +'<button onclick="delConfirm(\'essential\',this.dataset.id)" data-id="'+e.id+'" class="btn btn-danger" style="padding:7px 10px;font-size:11px">Del</button>'
         +'</div></div></div></div>';
     });
     catHtml+='</div>';
