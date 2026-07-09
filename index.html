@@ -1142,8 +1142,7 @@ function renderGold(){
       <div class="goal-ring">${Array.from({length:S.goldGoals.target},(_,i)=>`<div class="goal-dot ${i<rings.length?'filled':''}">${i<rings.length?'\uD83D\uDC8D':''}</div>`).join('')}</div>
     </div>
     <!-- FILTER & SORT -->
-    <div class="frow">${['All','916','999','Ring','Bracelet','Necklace','Bar','Coin','Anting'].map(f=>'<button class="fbtn '+(S.goldFilter===f?'on':'')+'" onclick="setGF(\''+(f)+'\')">'+(f)+'</button>').join('')}</div>
-    <div class="srow">${sbRow([{v:'date',l:'Latest'},{v:'grams',l:'Heaviest'},{v:'value',l:'Highest Value'}],S.goldSort,'setGS')}</div>
+    ${filterBar([{label:'Filter',options:[{v:'All',l:'All'},{v:'916',l:'916'},{v:'999',l:'999'},{v:'Ring',l:'Ring'},{v:'Bracelet',l:'Bracelet'},{v:'Necklace',l:'Necklace'},{v:'Bar',l:'Bar'},{v:'Coin',l:'Coin'},{v:'Anting',l:'Anting'}],current:S.goldFilter,fn:'setGF'},{label:'Sort',options:[{v:'date',l:'Latest'},{v:'grams',l:'Heaviest'},{v:'value',l:'Highest Value'}],current:S.goldSort,fn:'setGS'}])}
     ${items.length?items.map(goldCard).join(''):empty('\uD83E\uDD47','No gold yet','Add your first piece.')}
   </div>`;
 }
@@ -1202,7 +1201,7 @@ function renderSaves(){
       ${bar(pct,'var(--green)',8)}
       <div class="t-xs c-g mono mt6">${pct.toFixed(0)}% of total target reached</div>
     </div>
-    <div class="srow">${sbRow([{v:'pct',l:'Progress'},{v:'date',l:'Target Date'},{v:'amt',l:'Biggest'}],S.saveSort,'setSS')}</div>
+    ${filterBar([{label:'Sort',options:[{v:'pct',l:'Progress'},{v:'date',l:'Target Date'},{v:'amt',l:'Biggest'}],current:S.saveSort,fn:'setSS'}])}
     ${items.map(s=>{
       const p=s.target>0?(s.current/s.target)*100:0;
       const left=Math.max(0,s.target-s.current);
@@ -1254,31 +1253,35 @@ function renderProperty(){
   var gainHtml=totPurchase>0?('<div class="info-box mt8"><span class="t-xs c-m">Property gain vs purchase</span><span class="t-xs mono fw7 '+(gain>=0?'c-g':'c-r')+'">'+fmtRM(gain)+'</span></div>'):'';
   var propRows=(S.properties||[]).map(function(p){
     var g=Number(p.currentValue||0)-Number(p.purchasePrice||0);
-    var mainHtml=p.maintenance?('<div class="info-box"><span class="t-xs c-m">Monthly maintenance</span><span class="t-xs mono c-a">'+fmtRM(p.maintenance)+'</span></div>'):'';
-    var addrHtml=p.address?('<div class="t-xs c-m italic mb8">'+esc(p.address)+'</div>'):'';
-    var titleHtml=p.titleType?('<span class="chip cc">'+esc(p.titleType)+'</span>'):'';
-    return '<div class="card-flat" style="border-left:2px solid var(--purple)">'
-      +'<div class="row mb8"><div><div class="t-sm fw7 mb4">'+esc(p.name)+'</div>'
-      +'<div class="flex g5"><span class="chip cp">'+esc(p.type)+'</span>'+titleHtml+'</div></div>'
-      +'<div class="tar"><div class="t-md mono c-p fw7">'+fmtRM(p.currentValue)+'</div>'
-      +'<div class="t-xs '+(g>=0?'c-g':'c-r')+'">'+(g>=0?'&#9650;':'&#9660;')+' '+fmtRM(Math.abs(g))+'</div></div></div>'
+    var eid='prop-exp-'+p.id;
+    return '<div class="card-flat" style="border-left:2px solid var(--purple);padding:0;overflow:hidden">'
+      +'<div class="coll-header" onclick="toggleColl(\''+eid+'\')"><div style="width:34px;height:34px;border-radius:8px;background:var(--purpleBg);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#127968;</div>'
+      +'<div style="flex:1;min-width:0"><div class="t-name">'+esc(p.name)+'</div>'
+      +'<div class="flex g4"><span class="chip cp">'+esc(p.type)+'</span>'+(p.titleType?'<span class="chip cc">'+esc(p.titleType)+'</span>':'')+'</div></div>'
+      +'<div style="text-align:right;flex-shrink:0;margin-right:6px"><div class="t-amt c-p">'+fmtRM(p.currentValue)+'</div>'
+      +'<div class="t-xs '+(g>=0?'c-g':'c-r')+'">'+(g>=0?'&#9650;':'&#9660;')+' '+fmtRM(Math.abs(g))+'</div></div>'
+      +'<div class="coll-arrow" id="'+eid+'-arrow">&#9658;</div></div>'
+      +'<div class="coll-body" id="'+eid+'" style="padding:0 12px"><div style="padding-bottom:12px">'
       +'<div class="info-box"><span class="t-xs c-m">Purchase price</span><span class="t-xs mono c-m">'+fmtRM(p.purchasePrice)+'</span></div>'
-      +mainHtml+addrHtml
+      +(p.maintenance?'<div class="info-box"><span class="t-xs c-m">Monthly maintenance</span><span class="t-xs mono c-a">'+fmtRM(p.maintenance)+'</span></div>':'')
+      +(p.address?'<div class="t-xs c-m italic mb8">'+esc(p.address)+'</div>':'')
       +'<div class="flex g6"><button onclick="openPropForm(this.dataset.id)" data-id="'+p.id+'" class="btn btn-ghost flex1" style="font-size:12px">Edit</button>'
       +'<button onclick="delConfirm('prop',this.dataset.id)" data-id="'+p.id+'" class="btn btn-danger flex1" style="font-size:12px">Del</button></div>'
-      +'</div>';
+      +'</div></div></div>';
   }).join('');
   var assetRows=(S.assets||[]).map(function(a){
-    var noteHtml=a.notes?('<div class="t-xs c-m italic mb6">'+esc(a.notes)+'</div>'):'';
-    return '<div class="card-flat">'
-      +'<div class="row mb6"><div><div class="t-sm fw7 mb4">'+esc(a.name)+'</div>'
+    var eid='asset-exp-'+a.id;
+    return '<div class="card-flat" style="padding:0;overflow:hidden">'
+      +'<div class="coll-header" onclick="toggleColl(\''+eid+'\')"><div style="width:34px;height:34px;border-radius:8px;background:var(--primaryLight);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#128176;</div>'
+      +'<div style="flex:1;min-width:0"><div class="t-name">'+esc(a.name)+'</div>'
       +'<span class="chip cc">'+esc(a.type)+'</span></div>'
-      +'<div class="t-md mono c-c fw7">'+fmtRM(a.value)+'</div></div>'
-      +noteHtml
+      +'<div style="text-align:right;flex-shrink:0;margin-right:6px"><div class="t-amt c-c">'+fmtRM(a.value)+'</div></div>'
+      +'<div class="coll-arrow" id="'+eid+'-arrow">&#9658;</div></div>'
+      +'<div class="coll-body" id="'+eid+'" style="padding:0 12px"><div style="padding-bottom:12px">'
+      +(a.notes?'<div class="t-xs c-m italic mb6">'+esc(a.notes)+'</div>':'')
       +'<div class="flex g6"><button onclick="openAssetForm(this.dataset.id)" data-id="'+a.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
-
       +'<button onclick="delConfirm('asset',this.dataset.id)" data-id="'+a.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
-      +'</div>';
+      +'</div></div></div>';
   }).join('');
   return '<div class="sec">'
     +'<div class="sec-hdr"><div class="sec-title">Assets</div><button onclick="openPropForm()" class="btn-add">+ Add</button></div>'
@@ -1306,19 +1309,21 @@ function renderInsurance(){
     var dl=dLeft(ins.renewDate);
     var soon=dl!==null&&dl<=30;
     var col=dl!==null&&dl<=0?'var(--red)':soon?'var(--amber)':'var(--green)';
-    var dlHtml=dl!==null?('<div class="t-xs '+(dl<=0?'c-r':soon?'c-a':'c-g')+'">'+fmtDt(ins.renewDate)+(dl<=0?' - Expired!':dl<=30?' - '+dl+'d left':'')+'</div>'):'';
-    var benHtml=ins.beneficiary?('<div class="info-box"><span class="t-xs c-m">Beneficiary</span><span class="t-xs mono">'+esc(ins.beneficiary)+'</span></div>'):'';
-    return '<div class="card-flat" style="border-left:2px solid '+col+'">'
-      +'<div class="row mb8"><div><div class="t-sm fw7 mb4">'+esc(ins.name)+'</div>'
-      +'<div class="flex g5 wrap"><span class="chip cg">'+esc(ins.type)+'</span>'
-      +'<span class="chip ca">'+esc(ins.freq)+'</span></div></div>'
-      +'<div class="tar"><div class="t-md mono fw7">'+fmtRM(ins.premium)+'</div>'
-      +'<div class="t-xs c-m">/'+esc(ins.freq)+'</div>'+dlHtml+'</div></div>'
+    var eid='ins-exp-'+ins.id;
+    return '<div class="card-flat" style="border-left:2px solid '+col+';padding:0;overflow:hidden">'
+      +'<div class="coll-header" onclick="toggleColl(\''+eid+'\')"><div style="width:34px;height:34px;border-radius:8px;background:var(--greenBg);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#128737;&#65039;</div>'
+      +'<div style="flex:1;min-width:0"><div class="t-name">'+esc(ins.name)+'</div>'
+      +'<div class="flex g4"><span class="chip cg">'+esc(ins.type)+'</span><span class="chip ca">'+esc(ins.freq)+'</span></div></div>'
+      +'<div style="text-align:right;flex-shrink:0;margin-right:6px"><div class="t-amt">'+fmtRM(ins.premium)+'</div>'
+      +'<div class="t-xs c-m">/'+esc(ins.freq)+'</div></div>'
+      +'<div class="coll-arrow" id="'+eid+'-arrow">&#9658;</div></div>'
+      +'<div class="coll-body" id="'+eid+'" style="padding:0 12px"><div style="padding-bottom:12px">'
       +'<div class="info-box"><span class="t-xs c-m">Coverage</span><span class="t-xs mono c-g fw7">'+fmtRM(ins.coverage)+'</span></div>'
-      +benHtml
+      +(ins.beneficiary?'<div class="info-box"><span class="t-xs c-m">Beneficiary</span><span class="t-xs mono">'+esc(ins.beneficiary)+'</span></div>':'')
+      +(dl!==null?'<div class="info-box"><span class="t-xs c-m">Renewal</span><span class="t-xs mono '+(dl<=0?'c-r':soon?'c-a':'c-g')+'">'+fmtDt(ins.renewDate)+(dl<=0?' Expired!':dl<=30?' '+dl+'d left':'')+'</span></div>':'')
       +'<div class="flex g5 mt6"><button onclick="openInsForm(this.dataset.id)" data-id="'+ins.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
       +'<button onclick="delConfirm('ins',this.dataset.id)" data-id="'+ins.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
-      +'</div>';
+      +'</div></div></div>';
   }).join('');
   return '<div class="sec">'
     +'<div class="sec-hdr"><div class="sec-title">Insurance</div><button onclick="openInsForm()" class="btn-add">+ Add</button></div>'
@@ -1337,16 +1342,20 @@ function renderVehicle(){
     var nextKm=Number(v.lastServiceKm||0)+Number(v.serviceIntervalKm||5000);
     var kmLeft=Math.max(0,nextKm-Number(v.currentKm||0));
     var svcAlert=kmLeft<=500||(rl!==null&&rl<=30);
-    var rtHtml=v.roadTaxDate?('<div class="info-box"><span class="t-xs c-m">Road Tax</span><span class="t-xs mono '+(rl!==null&&rl<=0?'c-r':rl!==null&&rl<=30?'c-a':'c-g')+'">'+fmtDt(v.roadTaxDate)+(rl!==null&&rl<=0?' EXPIRED':rl!==null&&rl<=30?' ('+rl+'d)':'')+'</span></div>'):'';
-    var insHtml=v.insuranceDate?('<div class="info-box"><span class="t-xs c-m">Insurance</span><span class="t-xs mono '+(il!==null&&il<=0?'c-r':il!==null&&il<=30?'c-a':'c-g')+'">'+fmtDt(v.insuranceDate)+(il!==null&&il<=0?' EXPIRED':il!==null&&il<=30?' ('+il+'d)':'')+'</span></div>'):'';
-    var svcHtml=v.lastServiceDate?('<div class="info-box"><span class="t-xs c-m">Next service</span><span class="t-xs mono '+(svcAlert?'c-a':'c-g')+'">'+kmLeft.toLocaleString()+' km left</span></div>'):'';
-    return '<div class="card-glow mb10">'
-      +'<div class="row mb10"><div><div class="t-md fw7 mb4">'+esc(v.name)+'</div>'
-      +'<span class="chip cc">'+esc(v.plate)+'</span></div>'
-      +'<div class="flex g5"><button onclick="openVehicleForm(this.dataset.id)" data-id="'+v.id+'" class="btn btn-ghost" style="font-size:11px">Edit</button>'
-      +'<button onclick="delConfirm('vehicle',this.dataset.id)" data-id="'+v.id+'" class="btn btn-danger" style="font-size:11px">Del</button></div></div>'
-      +rtHtml+insHtml+svcHtml
-      +'</div>';
+    var eid='veh-exp-'+v.id;
+    var alertDot=(rl!==null&&rl<=30)||(il!==null&&il<=30)||svcAlert;
+    return '<div class="card-flat" style="border-left:2px solid var(--primary);padding:0;overflow:hidden;margin-bottom:9px">'
+      +'<div class="coll-header" onclick="toggleColl(\''+eid+'\')"><div style="width:34px;height:34px;border-radius:8px;background:var(--primaryLight);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#128663;</div>'
+      +'<div style="flex:1;min-width:0"><div class="t-name">'+esc(v.name)+'</div>'
+      +'<div class="flex g4"><span class="chip cc">'+esc(v.plate)+'</span>'+(alertDot?'<span class="chip cr">&#9888;&#65039;</span>':'')+'</div></div>'
+      +'<div class="coll-arrow" id="'+eid+'-arrow">&#9658;</div></div>'
+      +'<div class="coll-body" id="'+eid+'" style="padding:0 12px"><div style="padding-bottom:12px">'
+      +(v.roadTaxDate?'<div class="info-box"><span class="t-xs c-m">Road Tax</span><span class="t-xs mono '+(rl!==null&&rl<=0?'c-r':rl!==null&&rl<=30?'c-a':'c-g')+'">'+fmtDt(v.roadTaxDate)+(rl!==null&&rl<=0?' EXPIRED':rl!==null&&rl<=30?' ('+rl+'d)':'')+'</span></div>':'')
+      +(v.insuranceDate?'<div class="info-box"><span class="t-xs c-m">Insurance</span><span class="t-xs mono '+(il!==null&&il<=0?'c-r':il!==null&&il<=30?'c-a':'c-g')+'">'+fmtDt(v.insuranceDate)+(il!==null&&il<=0?' EXPIRED':il!==null&&il<=30?' ('+il+'d)':'')+'</span></div>':'')
+      +(v.lastServiceDate?'<div class="info-box"><span class="t-xs c-m">Next service</span><span class="t-xs mono '+(svcAlert?'c-a':'c-g')+'">'+kmLeft.toLocaleString()+' km left</span></div>':'')
+      +'<div class="flex g5 mt6"><button onclick="openVehicleForm(this.dataset.id)" data-id="'+v.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
+      +'<button onclick="delConfirm('vehicle',this.dataset.id)" data-id="'+v.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
+      +'</div></div></div>';
   }).join('');
   return '<div class="sec">'
     +'<div class="sec-hdr"><div class="sec-title">Vehicle</div><button onclick="openVehicleForm()" class="btn-add">+ Add</button></div>'
@@ -1359,17 +1368,19 @@ function renderSubs(){
   var tot=(S.subs||[]).reduce(function(s,i){var m=FREQ_M[i.freq]||1;return s+Number(i.amount||0)/m;},0);
   var rows=(S.subs||[]).map(function(sub){
     var stars='';for(var i=0;i<5;i++)stars+=i<(sub.rating||0)?'&#9733;':'&#9734;';
-    return '<div class="card-flat">'
-      +'<div class="row mb6"><div style="flex:1"><div class="t-sm fw7 mb4">'+esc(sub.name)+'</div>'
-      +'<div class="flex g4"><span class="chip cc">'+esc(sub.category||'')+'</span>'
-      +'<span class="chip ca">'+esc(sub.freq)+'</span></div></div>'
-      +'<div class="tar"><div class="t-md mono fw7">'+fmtRM(sub.amount)+'</div>'
-      +'<div class="t-xs c-m">/'+esc(sub.freq)+'</div>'
-      +'<div class="t-xs" style="color:var(--amber)">'+stars+'</div></div></div>'
-      +(sub.renewDate?('<div class="info-box"><span class="t-xs c-m">Renews</span><span class="t-xs mono c-m">'+fmtDt(sub.renewDate)+'</span></div>'):'')
+    var eid='sub-exp-'+sub.id;
+    return '<div class="card-flat" style="padding:0;overflow:hidden">'
+      +'<div class="coll-header" onclick="toggleColl(\''+eid+'\')"><div style="width:34px;height:34px;border-radius:8px;background:var(--purpleBg);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#128241;</div>'
+      +'<div style="flex:1;min-width:0"><div class="t-name">'+esc(sub.name)+'</div>'
+      +'<div class="flex g4"><span class="chip cc">'+esc(sub.category||'')+'</span><span class="chip ca">'+esc(sub.freq)+'</span></div></div>'
+      +'<div style="text-align:right;flex-shrink:0;margin-right:6px"><div class="t-amt">'+fmtRM(sub.amount)+'</div>'
+      +'<div class="t-xs" style="color:var(--amber)">'+stars+'</div></div>'
+      +'<div class="coll-arrow" id="'+eid+'-arrow">&#9658;</div></div>'
+      +'<div class="coll-body" id="'+eid+'" style="padding:0 12px"><div style="padding-bottom:12px">'
+      +(sub.renewDate?'<div class="info-box"><span class="t-xs c-m">Renews</span><span class="t-xs mono c-m">'+fmtDt(sub.renewDate)+'</span></div>':'')
       +'<div class="flex g5 mt6"><button onclick="openSubForm(this.dataset.id)" data-id="'+sub.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
       +'<button onclick="delConfirm('sub',this.dataset.id)" data-id="'+sub.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
-      +'</div>';
+      +'</div></div></div>';
   }).join('');
   return '<div class="sec">'
     +'<div class="sec-hdr"><div class="sec-title">Subscriptions</div><button onclick="openSubForm()" class="btn-add">+ Add</button></div>'
@@ -1507,15 +1518,19 @@ function renderWishes(){
   var WCOL={High:'var(--red)',Medium:'var(--amber)',Low:'var(--cyan)'};
   var rows=wishes.slice().sort(function(a,b){return ['High','Medium','Low'].indexOf(a.priority)-['High','Medium','Low'].indexOf(b.priority);}).map(function(w){
     var col=WCOL[w.priority]||'var(--muted)';
-    return '<div class="card-flat" style="border-left:2px solid '+col+'">'
-      +'<div class="row mb6"><div style="flex:1"><div class="t-sm fw7 mb4">'+esc(w.name)+'</div>'
+    var eid='wish-exp-'+w.id;
+    return '<div class="card-flat" style="border-left:2px solid '+col+';padding:0;overflow:hidden">'
+      +'<div class="coll-header" onclick="toggleColl(\''+eid+'\')"><div style="width:34px;height:34px;border-radius:8px;background:'+col+'15;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">&#127873;</div>'
+      +'<div style="flex:1;min-width:0"><div class="t-name">'+esc(w.name)+'</div>'
       +'<div class="flex g4"><span class="chip" style="background:'+col+'15;color:'+col+'">'+esc(w.priority)+'</span>'
-      +(w.category?('<span class="chip cc">'+esc(w.category)+'</span>'):'')+'</div></div>'
-      +'<div class="tar"><div class="t-md mono fw7">'+fmtRM(w.price||0)+'</div></div></div>'
-      +(w.notes?('<div class="t-xs c-m italic mb6">'+esc(w.notes)+'</div>'):'')
+      +(w.category?'<span class="chip cc">'+esc(w.category)+'</span>':'')+'</div></div>'
+      +'<div style="text-align:right;flex-shrink:0;margin-right:6px"><div class="t-amt">'+fmtRM(w.price||0)+'</div></div>'
+      +'<div class="coll-arrow" id="'+eid+'-arrow">&#9658;</div></div>'
+      +'<div class="coll-body" id="'+eid+'" style="padding:0 12px"><div style="padding-bottom:12px">'
+      +(w.notes?'<div class="t-xs c-m italic mb6">'+esc(w.notes)+'</div>':'')
       +'<div class="flex g5"><button onclick="openWishForm(this.dataset.id)" data-id="'+w.id+'" class="btn btn-ghost flex1" style="font-size:11px">Edit</button>'
       +'<button onclick="delConfirm('wish',this.dataset.id)" data-id="'+w.id+'" class="btn btn-danger flex1" style="font-size:11px">Del</button></div>'
-      +'</div>';
+      +'</div></div></div>';
   }).join('');
   return '<div class="sec">'
     +'<div class="sec-hdr"><div class="sec-title">Wishlist</div><button onclick="openWishForm()" class="btn-add">+ Add</button></div>'
@@ -1594,8 +1609,7 @@ function renderTasks(){
       </div>
     </div>
     <input class="finp mb10" placeholder="\uD83D\uDD0D Search tasks..." value="${esc(S.taskQ||'')}" oninput="S.taskQ=this.value;rp()" style="display:block"/>
-    <div class="frow">${['All','Pending','In Progress','Done'].map(s=>'<button class="fbtn '+((S.taskFS||'All')===s?'on':'')+'" onclick="setTFS(\''+(s)+'\')">'+(s)+'</button>').join('')}</div>
-    <div class="srow">${sbRow([{v:'urgency',l:'Urgency'},{v:'due',l:'Due Date'},{v:'energy',l:'Energy'}],S.taskSort||'urgency','setTS')}</div>
+    ${filterBar([{label:'Status',options:[{v:'All',l:'All'},{v:'Pending',l:'Pending'},{v:'In Progress',l:'In Progress'},{v:'Done',l:'Done'}],current:S.taskFS||'All',fn:'setTFS'},{label:'Sort',options:[{v:'urgency',l:'Urgency'},{v:'due',l:'Due Date'},{v:'energy',l:'Energy'}],current:S.taskSort||'urgency',fn:'setTS'}])}
     ${items.length?items.map(taskCard).join(''):empty('\uD83C\uDFAF','No tasks','Add your first task to get started.')}
   </div>`;
 }
